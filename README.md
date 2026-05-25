@@ -21,18 +21,12 @@ lagersync-plugins/
 
 ## Installation
 
-### Über das Dashboard (empfohlen)
+### Über das Dashboard
 1. Öffne dein LagerSync-Dashboard
 2. Gehe zu Einstellungen → 🧩 Plugins
 3. Klicke auf „Plugin installieren"
 4. Wähle das Plugin aus der Liste
 5. Klicke auf „Installieren"
-
-### Manuell von GitHub
-1. Lade das Plugin als ZIP herunter (`Code → Download ZIP`)
-2. Entpacke es in deinen `/plugins/` Ordner
-3. Gehe zu Einstellungen → 🧩 Plugins → **Neu laden**
-4. Aktiviere das Plugin
 
 ## Eigene Plugins veröffentlichen
 
