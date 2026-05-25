@@ -1,4 +1,4 @@
-# 🧩 Plugin-Entwicklung – Jonas-Lagerverwaltung
+# 🧩 Plugin-Entwicklung – LagerSync
 
 Diese Dokumentation richtet sich an Entwickler (und KIs), die Plugins für die Lagerverwaltung erstellen wollen.
 
