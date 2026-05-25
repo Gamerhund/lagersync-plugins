@@ -1,4 +1,4 @@
-# 🧩 Plugin-Entwicklung – Jonas-Lagerverwaltung
+# 🧩 Plugin-Entwicklung – LagerSync
 
 Diese Dokumentation richtet sich an Entwickler (und KIs), die Plugins für die Lagerverwaltung erstellen wollen.
 
@@ -6,18 +6,17 @@ Diese Dokumentation richtet sich an Entwickler (und KIs), die Plugins für die L
 
 ## Schnellstart
 
-Ein Plugin ist ein **Ordner** im `/plugins` Verzeichnis:
+Ein Plugin ist ein **Ordner** im `plugins/` Verzeichnis dieses Repositories:
 
 ```
-plugins/
-└── mein-plugin/
-    ├── plugin.json     ← Pflicht
-    ├── plugin.sig      ← Optional: Ed25519 Signatur
-    ├── backend.py      ← Optional: eigene API-Routen (Flask)
-    └── frontend.js     ← Optional: Browser-Code
+lagersync-plugins/
+└── plugins/
+    └── mein-plugin/
+        ├── plugin.json     ← Pflicht
+        ├── plugin.sig      ← Optional: Ed25519 Signatur
+        ├── backend.py      ← Optional: eigene API-Routen (Flask)
+        └── frontend.js     ← Optional: Browser-Code
 ```
-
-Nach dem Anlegen: Einstellungen → 🧩 Plugins → **Neu laden**
 
 ---
 
@@ -45,7 +44,7 @@ Nach dem Anlegen: Einstellungen → 🧩 Plugins → **Neu laden**
 | `version` | string | – | Versionsnummer, z.B. `"1.2.0"` |
 | `author` | string | – | Name des Entwicklers |
 | `description` | string | – | Kurzbeschreibung |
-| `trusted` | bool | – | `true` = offizielles Plugin (nur Gamerhund), `false` = extern |
+| `verified` | bool | – | `true` = verifiziertes offizielles Plugin (nur Gamerhund), `false` = Community-Plugin |
 | `enabled` | bool | – | `false` = Plugin wird beim Start nicht geladen |
 | `permissions` | array | – | Liste der benötigten Berechtigungen (siehe unten) |
 
@@ -81,7 +80,7 @@ Plugins müssen **explizit** Berechtigungen anfordern. Ohne Permission werden AP
 ["db.read", "inventory.read", "api.public"]
 ```
 
-**Trusted-Plugins erhalten automatisch mehr Rechte:**
+**Verified-Plugins erhalten automatisch mehr Rechte:**
 ```json
 ["db.read", "db.write", "inventory.read", "inventory.write", 
  "users.read", "notifications.send", "api.public", "api.admin"]
@@ -325,11 +324,12 @@ Dies ist ein **Beispiel** für Entwickler – kein echtes Plugin.
 
 Struktur:
 ```
-plugins/
-└── mein-plugin/
-    ├── plugin.json
-    ├── backend.py      ← Eigene API-Routen
-    └── frontend.js     ← UI-Code
+lagersync-plugins/
+└── plugins/
+    └── mein-plugin/
+        ├── plugin.json
+        ├── backend.py      ← Eigene API-Routen
+        └── frontend.js     ← UI-Code
 ```
 
 **plugin.json:**
@@ -339,7 +339,7 @@ plugins/
   "version": "1.0.0",
   "author": "DeinName",
   "description": "Ein Beispiel-Plugin zum Testen.",
-  "trusted": false,
+  "verified": false,
   "enabled": true
 }
 ```
@@ -371,14 +371,17 @@ PluginAPI.addMenuItem('Mein Plugin', '🔌', async function() {
 
 ---
 
-## Plugin veröffentlichen (GitHub)
+## Plugin veröffentlichen (lagersync-plugins Repo)
 
-1. GitHub-Repository erstellen
-2. Dateien direkt im Root: `plugin.json`, `backend.py`, `frontend.js`
-3. In der README erklären wie man es installiert
+1. Fork dieses Repositories: https://github.com/Gamerhund/lagersync-plugins
+2. Erstelle einen neuen Ordner unter `plugins/` für dein Plugin
+3. Füge deine Dateien hinzu: `plugin.json`, `backend.py`, `frontend.js`
+4. Erstelle einen Pull Request
+5. Nach Review und Merge wird dein Plugin im Marketplace angezeigt
 
-Nutzer können dann:
-- ZIP von GitHub runterladen (`Code → Download ZIP`)
+**Nutzer können dann:**
+- Plugin direkt über das Dashboard installieren (GitHub-Download)
+- Oder manuell: ZIP von GitHub runterladen (`Code → Download ZIP`)
 - Oder: `git clone https://github.com/... plugins/plugin-name`
 
 ---
@@ -400,10 +403,10 @@ Nutzer können dann:
 > - **Rate Limiting** – API-Aufrufe sind pro Zeiteinheit begrenzt
 > - **Code-Scanner** – Beim Laden wird auf gefährliche Muster geprüft
 
-Plugins von unbekannten Quellen werden im Plugin-Manager mit **⚠️ Extern** gekennzeichnet. Offizielle Plugins von Gamerhund tragen das **✅ Offiziell** Badge (`"trusted": true` in `plugin.json`).
+Plugins von unbekannten Quellen werden im Plugin-Manager mit **⚠️ Community** gekennzeichnet. Verifizierte offizielle Plugins von Gamerhund tragen das **✅ Verifiziert** Badge (`"verified": true` in `plugin.json`).
 
 > ⚠️ **Trotz Sicherheitsmaßnahmen:** Installiere nur Plugins deren Quellcode du gelesen und verstanden hast. Externe Plugins können potenziell schädlichen Code enthalten, der nicht vom Scanner erkannt wird.
 
 ---
 
-*Dokumentation: Jonas-Lagerverwaltung Plugin-System · CC BY-NC 4.0*
+*Dokumentation: LagerSync Plugin-System · CC BY-NC 4.0*

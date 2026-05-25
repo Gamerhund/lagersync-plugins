@@ -1,35 +1,45 @@
-# Plugin Marketplace (lokal / offline)
+# LagerSync Plugin Marketplace
 
-Lege neue Plugins als Unterordner hier ab. Jeder Ordner braucht eine `plugin.json`.
+Offizieller Plugin-Marktplatz für LagerSync. Hier findest du verifizierte Plugins und Community-Erweiterungen für deine Lagerverwaltung.
 
 ## Struktur eines Plugins
 
 ```
-marketplace/
-  mein-plugin/
-    plugin.json      ← Pflichtdatei
-    backend.py       ← optional
-    frontend.js      ← optional
+lagersync-plugins/
+  plugins/
+    mein-plugin/
+      plugin.json      ← Pflichtdatei
+      backend.py       ← optional
+      frontend.js      ← optional
 ```
 
-## plugin.json Beispiel
+## Verfügbare Plugins
 
-```json
-{
-  "id": "mein-plugin",
-  "name": "Mein Plugin",
-  "description": "Was das Plugin macht",
-  "version": "1.0.0",
-  "author": "Gamerhund",
-  "category": "inventory",
-  "tags": ["tool", "export"],
-  "enabled": false
-}
-```
+- **ki-assistent** – KI-Chat mit Ollama/OpenAI-Integration
+- **low_stock_notifications** – Benachrichtigungen per Telegram, Discord, Webhook oder E-Mail
+- **pro-design** – Alternatives cleanes Web-Design
 
 ## Installation
 
-Im Einstellungsmenü unter **Plugins → Marketplace** auf „Installieren" klicken.
-Das Plugin wird dann nach `/plugins/` kopiert und ist aktivierbar.
+### Über das Dashboard (empfohlen)
+1. Öffne dein LagerSync-Dashboard
+2. Gehe zu Einstellungen → 🧩 Plugins
+3. Klicke auf „Plugin installieren"
+4. Wähle das Plugin aus der Liste
+5. Klicke auf „Installieren"
 
-Keine Internetverbindung erforderlich.
+### Manuell von GitHub
+1. Lade das Plugin als ZIP herunter (`Code → Download ZIP`)
+2. Entpacke es in deinen `/plugins/` Ordner
+3. Gehe zu Einstellungen → 🧩 Plugins → **Neu laden**
+4. Aktiviere das Plugin
+
+## Eigene Plugins veröffentlichen
+
+1. Fork dieses Repositories: https://github.com/Gamerhund/lagersync-plugins
+2. Erstelle einen neuen Ordner unter `plugins/` für dein Plugin
+3. Füge deine Dateien hinzu: `plugin.json`, `backend.py`, `frontend.js`
+4. Erstelle einen Pull Request
+5. Nach Review und Merge wird dein Plugin im Marketplace angezeigt
+
+Siehe [PLUGINS.md](PLUGINS.md) für die vollständige Plugin-Entwicklungsdokumentation.
