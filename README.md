@@ -29,7 +29,7 @@ Offizieller Plugin-Marktplatz für [LagerSync](https://github.com/Gamerhund). Er
 
 ## 🛠️ Eigene Plugins entwickeln
 
-Jeder kann Plugins erstellen – du brauchst nur grundlegende Python- oder JavaScript-Kenntnisse. Die vollständige Dokumentation findest du in [PLUGINS.md](PLUGINS.md).
+Jeder kann Plugins erstellen – du brauchst nur grundlegende Python- oder JavaScript-Kenntnisse.
 
 **Kurzübersicht – Struktur eines Plugins:**
 
@@ -41,7 +41,12 @@ plugins/
     └── frontend.js     ← optional: Browser-UI
 ```
 
-**KI-Unterstützung:** Gib [PLUGINS.md](PLUGINS.md) einfach einer KI (z.B. Claude oder ChatGPT) und beschreibe was dein Plugin tun soll – die Dokumentation enthält alle nötigen Infos für automatische Plugin-Generierung.
+| Dokumentation | Für wen |
+|---|---|
+| [PLUGINS.md](PLUGINS.md) | Entwickler – vollständige, menschenlesbare Dokumentation |
+| [PLUGINS_KI.md](PLUGINS_KI.md) | Vibe Coding – speziell für KI-Agenten aufbereitet |
+
+**Tipp für Vibe Coding:** Gib [PLUGINS_KI.md](PLUGINS_KI.md) einer KI (z.B. Claude oder ChatGPT) und beschreibe was dein Plugin tun soll – sie generiert direkt PR-fertigen Code der alle automatischen Tests besteht.
 
 ---
 
