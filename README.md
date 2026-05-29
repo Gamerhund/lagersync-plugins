@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Plugins](https://img.shields.io/badge/Plugins-3%20verfügbar-blue.svg)](plugins/)
 
-Offizieller Plugin-Marktplatz für [LagerSync](https://github.com/Gamerhund). Erweitere deine Lagerverwaltung mit verifizierten Plugins und Community-Erweiterungen – direkt über das Dashboard installierbar.
+Offizieller Plugin-Marktplatz für [LagerSync](https://lagersync.de). Erweitere deine Lagerverwaltung mit verifizierten Plugins und Community-Erweiterungen – direkt über das Dashboard installierbar.
 
 ---
 
