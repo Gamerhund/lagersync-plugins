@@ -86,3 +86,26 @@ def test_plugin_folder_name_no_spaces(plugin_dir):
         if plugin_path.is_dir() and not plugin_path.name.startswith("__"):
             assert " " not in plugin_path.name, \
                 f"Plugin-Ordner {plugin_path.name} darf keine Leerzeichen enthalten"
+
+
+def test_plugin_folder_name_valid_chars(plugin_dir):
+    """
+    Plugin-Ordnername darf nur a-z, A-Z, 0-9, Bindestrich und Unterstrich enthalten.
+
+    Spiegelt die Eingabe-Validierung in api_plugins_install() (plugin_additions.py):
+        re.match(r'^[a-zA-Z0-9_-]+$', plugin_name)
+
+    Plugin-Namen die diesen Test nicht bestehen werden beim Install mit
+    HTTP 400 "Ungültige Plugin-ID" abgelehnt.
+    """
+    import re
+    for plugin_path in plugin_dir.iterdir():
+        if plugin_path.is_dir() and not plugin_path.name.startswith("__"):
+            assert re.match(r'^[a-zA-Z0-9_-]+$', plugin_path.name), (
+                f"\n\n"
+                f"  ❌  Plugin-Ordner '{plugin_path.name}' enthält ungültige Zeichen.\n\n"
+                f"  Erlaubt: a-z, A-Z, 0-9, Bindestrich (-), Unterstrich (_)\n"
+                f"  Nicht erlaubt: Leerzeichen, Punkte, Sonderzeichen, Umlaute\n\n"
+                f"  Dieser Name wird beim Installieren vom Server abgelehnt.\n"
+                f"  Fix: Ordner umbenennen z.B. 'mein-plugin' oder 'mein_plugin'\n"
+            )
