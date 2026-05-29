@@ -12,6 +12,15 @@ from pathlib import Path
 
 PLUGIN_DIR = Path(__file__).parent.parent / "plugins"
 
+# Plugins die vom Maintainer (Jonas) persönlich geprüft und freigegeben wurden.
+# Nur Jonas ergänzt hier Einträge – gleichzeitig mit dem Setzen von "verified": true
+# in der plugin.json und dem Hinzufügen der Ed25519-Signatur.
+MAINTAINER_VERIFIED_PLUGINS = frozenset([
+    "ki-assistent",
+    "low_stock_notifications",
+    "pro-design",
+])
+
 @pytest.fixture
 def plugin_dir():
     """Pfad zum plugins/ Ordner"""
