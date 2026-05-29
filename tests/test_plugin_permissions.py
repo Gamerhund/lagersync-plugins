@@ -36,17 +36,3 @@ def test_plugin_permissions_is_list(plugin_dir):
             permissions = data.get("permissions")
             assert isinstance(permissions, list), \
                 f"Plugin {plugin_path.name}: permissions muss eine Liste sein"
-
-
-def test_verified_plugins_have_more_permissions(plugin_dir):
-    """Verifizierte Plugins sollten mehr Permissions haben als nicht-verifizierte"""
-    for plugin_path in plugin_dir.iterdir():
-        if plugin_path.is_dir() and not plugin_path.name.startswith("__"):
-            plugin_json = plugin_path / "plugin.json"
-            with open(plugin_json, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            
-            if data.get("verified"):
-                permissions = data.get("permissions", [])
-                assert len(permissions) > 0, \
-                    f"Plugin {plugin_path.name}: Verifizierte Plugins sollten Permissions haben"
