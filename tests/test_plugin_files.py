@@ -51,3 +51,51 @@ def test_frontend_js_syntax_if_exists(plugin_dir):
                 # Einfache Syntax-Prüfung: prüfe auf grundlegende JavaScript-Muster
                 # (keine vollständige JS-Parser-Implementierung)
                 assert content.strip(), f"Plugin {plugin_path.name}: frontend.js ist leer"
+
+
+def test_plugin_files_have_safe_names(plugin_dir):
+    """
+    Alle Dateien in einem Plugin-Ordner müssen sichere Namen haben.
+
+    Spiegelt den Download-Filter in api_plugins_install() (plugin_additions.py):
+        re.match(r'[a-zA-Z0-9_.-]+', fname)
+
+    Dateien mit unsicheren Namen werden beim GitHub-Download stillschweigend
+    übersprungen – das Plugin wäre dann unvollständig installiert.
+    """
+    import re
+    allowed = re.compile(r'^[a-zA-Z0-9_.\-]+$')
+    for plugin_path in plugin_dir.iterdir():
+        if not plugin_path.is_dir() or plugin_path.name.startswith("__"):
+            continue
+        for filepath in plugin_path.iterdir():
+            if filepath.is_file():
+                assert allowed.match(filepath.name), (
+                    f"Plugin {plugin_path.name}: Datei '{filepath.name}' hat einen unsicheren Namen.\n"
+                    f"  Erlaubt: a-z, A-Z, 0-9, Bindestrich (-), Unterstrich (_), Punkt (.)\n"
+                    f"  Diese Datei wird beim Install übersprungen – Plugin wäre unvollständig!"
+                )
+
+
+def test_backend_blueprint_instantiated_correctly(plugin_dir):
+    """
+    plugin_blueprint muss als Flask Blueprint instanziiert sein:
+        plugin_blueprint = Blueprint('name', __name__)
+
+    Der Plugin-Loader (plugin_loader.py) prüft hasattr(module, 'plugin_blueprint')
+    und registriert es als Blueprint. Ein falscher Name oder fehlende Instanziierung
+    bedeutet: Backend-Routen werden nie registriert, alle Anfragen gehen ins Leere.
+    """
+    import re
+    for plugin_path in plugin_dir.iterdir():
+        if not plugin_path.is_dir() or plugin_path.name.startswith("__"):
+            continue
+        backend_py = plugin_path / "backend.py"
+        if not backend_py.exists():
+            continue
+        content = backend_py.read_text(encoding="utf-8")
+        assert re.search(r'plugin_blueprint\s*=\s*Blueprint\s*\(', content), (
+            f"Plugin {plugin_path.name}: plugin_blueprint nicht korrekt instanziiert.\n"
+            f"  Erwartet: plugin_blueprint = Blueprint('name', __name__)\n"
+            f"  Der Plugin-Loader registriert nur Blueprints mit exakt diesem Attributnamen."
+        )
