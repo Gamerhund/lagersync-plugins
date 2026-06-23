@@ -3,11 +3,11 @@
 
 async function _ssoInjectLoginButton() {
     try {
-        var resp = await PluginAPI.fetch(pluginId, '/public-config');
-        var cfg = await resp.json();
+        const resp = await PluginAPI.fetch(pluginId, '/public-config');
+        const cfg = await resp.json();
         if (!cfg.configured) return;
 
-        var target =
+        const target =
             document.querySelector('#pinScreen') ||
             document.querySelector('.login-screen') ||
             document.querySelector('.pin-screen');
@@ -15,13 +15,13 @@ async function _ssoInjectLoginButton() {
         if (!target) return; // Login-Bereich nicht gefunden - kein Fehler, einfach kein Button
         if (document.getElementById('sso-login-btn')) return; // schon vorhanden
 
-        var btn = document.createElement('button');
+        const btn = document.createElement('button');
         btn.id = 'sso-login-btn';
         btn.className = 'btn';
         btn.style.cssText = 'width:100%;margin-top:16px;display:flex;align-items:center;justify-content:center;gap:8px;';
         btn.innerHTML = '🔐 ' + (cfg.button_text || 'Mit SSO anmelden');
         btn.onclick = function () {
-            window.location.href = '/api/plugin/' + pluginId + '/login';
+            globalThis.location.href = '/api/plugin/' + pluginId + '/login';
         };
         target.appendChild(btn);
     } catch (e) {
@@ -37,7 +37,7 @@ if (document.readyState === 'loading') {
 
 // ---------- Admin-Einstellungen im Menue ----------
 PluginAPI.addMenuItem('SSO', '🔐', async function () {
-    var m = document.createElement('div');
+    const m = document.createElement('div');
     m.className = 'modal';
     m.style.display = 'flex';
     m.innerHTML =
@@ -66,16 +66,16 @@ PluginAPI.addMenuItem('SSO', '🔐', async function () {
     document.body.appendChild(m);
     m.addEventListener('click', function (e) { if (e.target === m) m.remove(); });
 
-    var statusEl = document.getElementById('sso-status');
-    var testResultEl = document.getElementById('sso-test-result');
+    const statusEl = document.getElementById('sso-status');
+    const testResultEl = document.getElementById('sso-test-result');
 
     try {
-        var resp = await PluginAPI.fetch(pluginId, '/config');
+        const resp = await PluginAPI.fetch(pluginId, '/config');
         if (resp.status === 403) {
             statusEl.textContent = 'Nur fuer Administratoren sichtbar.';
             return;
         }
-        var cfg = await resp.json();
+        const cfg = await resp.json();
         document.getElementById('sso-issuer').value = cfg.issuer || '';
         document.getElementById('sso-client-id').value = cfg.client_id || '';
         document.getElementById('sso-client-secret').placeholder = cfg.client_secret
@@ -89,16 +89,16 @@ PluginAPI.addMenuItem('SSO', '🔐', async function () {
     }
 
     document.getElementById('sso-test').onclick = async function () {
-        var issuer = document.getElementById('sso-issuer').value.trim();
+        const issuer = document.getElementById('sso-issuer').value.trim();
         testResultEl.textContent = 'Teste...';
         testResultEl.style.color = '#888';
         try {
-            var resp = await PluginAPI.fetch(pluginId, '/test-issuer', {
+            const resp = await PluginAPI.fetch(pluginId, '/test-issuer', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ issuer: issuer }),
             });
-            var result = await resp.json();
+            const result = await resp.json();
             if (result.ok) {
                 testResultEl.textContent = '✅ Provider erreichbar, Discovery erfolgreich';
                 testResultEl.style.color = '#4caf50';
@@ -113,26 +113,26 @@ PluginAPI.addMenuItem('SSO', '🔐', async function () {
     };
 
     document.getElementById('sso-save').onclick = async function () {
-        var body = {
+        const body = {
             issuer: document.getElementById('sso-issuer').value.trim(),
             client_id: document.getElementById('sso-client-id').value.trim(),
             button_text: document.getElementById('sso-button-text').value.trim(),
             autocreate: document.getElementById('sso-autocreate').checked,
         };
-        var secret = document.getElementById('sso-client-secret').value;
+        const secret = document.getElementById('sso-client-secret').value;
         if (secret) body.client_secret = secret;
 
         try {
-            var resp = await PluginAPI.fetch(pluginId, '/config', {
+            const resp = await PluginAPI.fetch(pluginId, '/config', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),
             });
             if (!resp.ok) throw new Error('HTTP ' + resp.status);
-            showToast && showToast('✅ Gespeichert');
+            showToast?.('✅ Gespeichert');
             m.remove();
         } catch (e) {
-            showToast && showToast('❌ Fehler: ' + e.message, 'error');
+            showToast?.('❌ Fehler: ' + e.message, 'error');
         }
     };
 });

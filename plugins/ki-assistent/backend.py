@@ -9,6 +9,8 @@ import re
 
 plugin_blueprint = Blueprint("ki_assistent", __name__)
 
+OLLAMA_DEFAULT_URL = "http://localhost:11434"
+
 def _is_safe_url(url: str, allow_localhost: bool = True) -> bool:
     """Validate URL scheme to prevent SSRF attacks."""
     try:
@@ -37,7 +39,7 @@ def _get_ki_settings():
         conn.close()
     return {
         "provider": "ollama",
-        "ollama_url": "http://localhost:11434",
+        "ollama_url": OLLAMA_DEFAULT_URL,
         "ollama_model": "llama3.2",
         "api_url": "",
         "api_key": "",
@@ -102,7 +104,7 @@ def _get_lager_context(product_limit: int = 25):
         if produkte:
             context += f"Produkte (max. {product_limit}):\n"
             for p in produkte:
-                pid, name, min_s, barcode, kurz, ort, stock = p
+                _, name, min_s, _, _, ort, stock = p
                 warnung = " ⚠️" if min_s and stock < min_s else ""
                 context += f"- {name}: {stock} Stk ({ort}){warnung}\n"
         else:
@@ -119,7 +121,7 @@ def _get_lager_context(product_limit: int = 25):
 
 
 def _call_ollama(settings, messages):
-    url = settings.get("ollama_url", "http://localhost:11434") + "/api/chat"
+    url = settings.get("ollama_url", OLLAMA_DEFAULT_URL) + "/api/chat"
     model = settings.get("ollama_model", "llama3.2")
 
     if not _is_safe_url(url, allow_localhost=True):
@@ -354,7 +356,7 @@ def list_models():
     if settings.get("provider") != "ollama":
         return json_response({"status": "ok", "models": [], "note": "Nur für Ollama verfügbar"})
 
-    url = settings.get("ollama_url", "http://localhost:11434") + "/api/tags"
+    url = settings.get("ollama_url", OLLAMA_DEFAULT_URL) + "/api/tags"
 
     try:
         req = urllib.request.Request(url)
@@ -379,7 +381,8 @@ def chat():  # NOSONAR - AI chat handler, intentional complexity
     m = re.search(r"\b(?:ek|einkaufspreis|einkauf)\b", str(user_message).lower())
     if m:
         product_part = str(user_message)
-        product_part = re.sub(r"\b(?:was\s+hat|wie\s+hoch\s+ist|wie\s+viel\s+kostet|preis|ek|einkaufspreis|einkauf|f\s*ü\s*r|von|\?|:)\b", " ", product_part, flags=re.IGNORECASE)
+        for pattern in [r"\bwas\s+hat\b", r"\bwie\s+hoch\s+ist\b", r"\bwie\s+viel\s+kostet\b", r"\bpreis\b", r"\bek\b", r"\beinkaufspreis\b", r"\beinkauf\b", r"\bf\s*ü\s*r\b", r"\bvon\b", r"\?", r":"]:
+            product_part = re.sub(pattern, " ", product_part, flags=re.IGNORECASE)
         product_part = re.sub(r"\s+", " ", product_part).strip()
         info, err = _get_product_purchase_price(product_part)
         if err:

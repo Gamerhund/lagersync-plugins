@@ -17,6 +17,7 @@ _KEY_TG_PENDING = "telegram_pending"
 _KEY_EMAIL_PASS = "email_password"
 _ENC_UTF8 = "utf-8"
 _MASKED = "********"
+_CONTENT_TYPE_JSON = "application/json"
 
 
 _threads_started = False
@@ -246,7 +247,7 @@ def _send_telegram(settings, message):
         req = urllib.request.Request(
             url,
             data=json_module.dumps(payload).encode(_ENC_UTF8),
-            headers={"Content-Type": "application/json"}
+            headers={"Content-Type": _CONTENT_TYPE_JSON}
         )
         with urllib.request.urlopen(req, timeout=15) as _:  # nosec B310 # NOSONAR
             data = json_module.loads(_.read().decode(_ENC_UTF8))
@@ -258,7 +259,7 @@ def _send_telegram(settings, message):
         try:
             err_json = json_module.loads(err_body)
             err_msg = err_json.get("description", err_body[:100])
-        except:
+        except (json_module.JSONDecodeError, ValueError):
             err_msg = err_body[:100] if err_body else f"HTTP {e.code}"
         return False, f"Telegram HTTP {e.code}: {err_msg}"
     except urllib.error.URLError as e:
@@ -281,7 +282,7 @@ def _send_discord(settings, message):
         req = urllib.request.Request(
             webhook_url,
             data=json_module.dumps(payload).encode(_ENC_UTF8),
-            headers={"Content-Type": "application/json"}
+            headers={"Content-Type": _CONTENT_TYPE_JSON}
         )
         with urllib.request.urlopen(req, timeout=15) as _:  # nosec B310 # NOSONAR
             return True, None
@@ -306,7 +307,7 @@ def _send_webhook(settings, data):
         req = urllib.request.Request(
             url,
             data=json_module.dumps(data).encode(_ENC_UTF8),
-            headers={"Content-Type": "application/json"}
+            headers={"Content-Type": _CONTENT_TYPE_JSON}
         )
         with urllib.request.urlopen(req, timeout=15) as resp:  # nosec B310 # NOSONAR
             return True, None
@@ -417,7 +418,7 @@ def _check_and_notify():  # NOSONAR - orchestration function, intentional comple
     if not low_stock:
         low_stock = []
 
-    current_ids = set(r[0] for r in low_stock)
+    current_ids = {r[0] for r in low_stock}
     last_ids = set(settings.get("last_low_stock", []))
 
     new_low = [r for r in low_stock if r[0] not in last_ids]
@@ -539,13 +540,13 @@ def _check_and_notify():  # NOSONAR - orchestration function, intentional comple
     errors = []
 
     if settings.get("telegram_enabled"):
-        ok, err = _send_telegram(settings, message)
+        _, err = _send_telegram(settings, message)
         if err:
             errors.append(f"Telegram: {err}")
 
     if settings.get("discord_enabled"):
         discord_msg = message.replace("<b>", "**").replace("</b>", "**")
-        ok, err = _send_discord(settings, discord_msg)
+        _, err = _send_discord(settings, discord_msg)
         if err:
             errors.append(f"Discord: {err}")
 
@@ -556,13 +557,13 @@ def _check_and_notify():  # NOSONAR - orchestration function, intentional comple
             "items": [{"name": r[1], "stock": r[2], "min_stock": r[3]} for r in new_low],
             "timestamp": int(time_module.time() * 1000)
         }
-        ok, err = _send_webhook(settings, data)
+        _, err = _send_webhook(settings, data)
         if err:
             errors.append(f"Webhook: {err}")
 
     if settings.get("email_enabled"):
         body = message.replace("<b>", "").replace("</b>", "")
-        ok, err = _send_email(settings, subject, body)
+        _, err = _send_email(settings, subject, body)
         if err:
             errors.append(f"E-Mail: {err}")
 
@@ -680,22 +681,22 @@ def test_notification():
             tmp[_KEY_TG_TOKEN] = data.get(_KEY_TG_TOKEN)
         if _KEY_TG_CHAT in data:
             tmp[_KEY_TG_CHAT] = data.get(_KEY_TG_CHAT)
-        ok, err = _send_telegram(tmp, "✅ Telegram Test erfolgreich")
+        _, err = _send_telegram(tmp, "✅ Telegram Test erfolgreich")
     elif ntype == "discord":
         if "discord_webhook" in data:
             tmp["discord_webhook"] = data.get("discord_webhook")
-        ok, err = _send_discord(tmp, "✅ Discord Test erfolgreich")
+        _, err = _send_discord(tmp, "✅ Discord Test erfolgreich")
     elif ntype == "webhook":
         if "webhook_url" in data:
             tmp["webhook_url"] = data.get("webhook_url")
-        ok, err = _send_webhook(tmp, {"type": "test", "message": "Webhook Test erfolgreich", "ts": int(time_module.time() * 1000)})
+        _, err = _send_webhook(tmp, {"type": "test", "message": "Webhook Test erfolgreich", "ts": int(time_module.time() * 1000)})
     elif ntype == "email":
         for k in ("email_smtp", "email_port", "email_user", _KEY_EMAIL_PASS, "email_to", "email_use_tls"):
             if k in data:
                 if k == _KEY_EMAIL_PASS and _is_masked_secret(data.get(k)):
                     continue
                 tmp[k] = data.get(k)
-        ok, err = _send_email(tmp, "Lagerverwaltung Test", "E-Mail Test erfolgreich")
+        _, err = _send_email(tmp, "Lagerverwaltung Test", "E-Mail Test erfolgreich")
     else:
         return json_response({"status": "error", "message": "Unbekannter Typ"})
 
