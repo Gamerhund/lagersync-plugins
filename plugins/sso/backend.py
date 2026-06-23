@@ -197,13 +197,10 @@ def sso_login():
 
 # ---------- SSO Callback ----------
 
-@plugin_blueprint.route(CALLBACK_PATH, methods=['GET'])
-def sso_callback():  # NOSONAR - OIDC callback orchestration, intentional complexity
-    cfg = _get_config()
-
+def _validate_callback_params():
     oidc_error = request.args.get('error')
     if oidc_error:
-        return f'Anmeldung abgebrochen: {oidc_error}', 400
+        return None, f'Anmeldung abgebrochen: {oidc_error}', 400
 
     code = request.args.get('code')
     state = request.args.get('state')
@@ -211,16 +208,20 @@ def sso_callback():  # NOSONAR - OIDC callback orchestration, intentional comple
     state_ts = session.pop('sso_state_ts', 0)
 
     if not code or not state or state != expected_state:
-        return 'Ungueltige oder abgelaufene Anfrage. Bitte erneut versuchen.', 400
+        return None, 'Ungueltige oder abgelaufene Anfrage. Bitte erneut versuchen.', 400
     if time.time() - state_ts > 600:
-        return 'Anfrage abgelaufen. Bitte erneut versuchen.', 400
+        return None, 'Anfrage abgelaufen. Bitte erneut versuchen.', 400
 
+    return code, None, None
+
+
+def _exchange_token(cfg, code):
     try:
         discovery = _discover(cfg['issuer'])
         token_endpoint = discovery['token_endpoint']
         userinfo_endpoint = discovery['userinfo_endpoint']
     except Exception as e:
-        return f'Provider nicht erreichbar oder Discovery fehlgeschlagen: {e}', 502
+        return None, None, f'Provider nicht erreichbar oder Discovery fehlgeschlagen: {e}', 502
 
     prefix = request.path.rsplit(CALLBACK_PATH, 1)[0]
     redirect_uri = request.host_url.rstrip('/') + prefix + CALLBACK_PATH
@@ -240,7 +241,7 @@ def sso_callback():  # NOSONAR - OIDC callback orchestration, intentional comple
         token_resp.raise_for_status()
         access_token = token_resp.json().get('access_token')
         if not access_token:
-            return 'Token-Austausch fehlgeschlagen (kein access_token erhalten).', 502
+            return None, None, 'Token-Austausch fehlgeschlagen (kein access_token erhalten).', 502
 
         userinfo_resp = requests.get(
             userinfo_endpoint,
@@ -250,7 +251,22 @@ def sso_callback():  # NOSONAR - OIDC callback orchestration, intentional comple
         userinfo_resp.raise_for_status()
         userinfo = userinfo_resp.json()
     except requests.RequestException as e:
-        return f'Verbindung zum Provider fehlgeschlagen: {e}', 502
+        return None, None, f'Verbindung zum Provider fehlgeschlagen: {e}', 502
+
+    return userinfo, None, None
+
+
+@plugin_blueprint.route(CALLBACK_PATH, methods=['GET'])
+def sso_callback():
+    cfg = _get_config()
+
+    code, error_msg, status_code = _validate_callback_params()
+    if error_msg:
+        return error_msg, status_code
+
+    userinfo, error_msg, status_code = _exchange_token(cfg, code)
+    if error_msg:
+        return error_msg, status_code
 
     username_claim = userinfo.get('preferred_username') or userinfo.get('email') or userinfo.get('sub')
     if not username_claim:

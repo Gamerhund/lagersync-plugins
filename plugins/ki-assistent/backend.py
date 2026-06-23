@@ -191,7 +191,35 @@ def _call_openai_api(settings, messages):
         return None, str(e)
 
 
-def _execute_action(action, params):  # NOSONAR - action orchestration, intentional complexity
+def _update_inventory_stock(c, prod_id, location, delta):
+    timestamp = int(time.time() * 1000)
+    if location:
+        c.execute("SELECT quantity FROM inventory WHERE product_id = ? AND location = ?",
+                  (prod_id, location))
+        inv_row = c.fetchone()
+        old_stock = inv_row[0] if inv_row else 0
+        new_stock = old_stock + delta
+
+        if inv_row:
+            c.execute("UPDATE inventory SET quantity = ?, last_changed = ? WHERE product_id = ? AND location = ?",
+                      (new_stock, timestamp, prod_id, location))
+        else:
+            c.execute("INSERT INTO inventory (location, product_id, quantity, last_changed) VALUES (?, ?, ?, ?)",
+                      (location, prod_id, new_stock, timestamp))
+    else:
+        c.execute("SELECT location, quantity FROM inventory WHERE product_id = ?", (prod_id,))
+        inv_rows = c.fetchall()
+        if inv_rows:
+            loc, old_stock = inv_rows[0]
+            new_stock = old_stock + delta
+            c.execute("UPDATE inventory SET quantity = ?, last_changed = ? WHERE product_id = ? AND location = ?",
+                      (new_stock, timestamp, prod_id, loc))
+        else:
+            return None, "Kein Lagerort für Produkt gefunden. Bitte Ort angeben."
+    return old_stock, new_stock
+
+
+def _execute_action(action, params):
     conn = get_db_connection()
     c = conn.cursor()
     try:
@@ -208,29 +236,11 @@ def _execute_action(action, params):  # NOSONAR - action orchestration, intentio
 
             prod_id, real_name = row
 
-            if location:
-                c.execute("SELECT quantity FROM inventory WHERE product_id = ? AND location = ?",
-                          (prod_id, location))
-                inv_row = c.fetchone()
-                old_stock = inv_row[0] if inv_row else 0
-                new_stock = old_stock + delta
-
-                if inv_row:
-                    c.execute("UPDATE inventory SET quantity = ?, last_changed = ? WHERE product_id = ? AND location = ?",
-                              (new_stock, int(time.time() * 1000), prod_id, location))
-                else:
-                    c.execute("INSERT INTO inventory (location, product_id, quantity, last_changed) VALUES (?, ?, ?, ?)",
-                              (location, prod_id, new_stock, int(time.time() * 1000)))
+            stock_result = _update_inventory_stock(c, prod_id, location, delta)
+            if isinstance(stock_result, tuple):
+                old_stock, new_stock = stock_result
             else:
-                c.execute("SELECT location, quantity FROM inventory WHERE product_id = ?", (prod_id,))
-                inv_rows = c.fetchall()
-                if inv_rows:
-                    loc, old_stock = inv_rows[0]
-                    new_stock = old_stock + delta
-                    c.execute("UPDATE inventory SET quantity = ?, last_changed = ? WHERE product_id = ? AND location = ?",
-                              (new_stock, int(time.time() * 1000), prod_id, loc))
-                else:
-                    return None, "Kein Lagerort für Produkt gefunden. Bitte Ort angeben."
+                return stock_result
 
             c.execute("""
                 INSERT INTO inventory_events (product_id, delta, new_qty, user, timestamp)

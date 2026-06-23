@@ -16,8 +16,8 @@
             document.querySelector('.login-screen') ||
             document.querySelector('.pin-screen');
 
-        if (!target) return; // Login-Bereich nicht gefunden - kein Fehler, einfach kein Button
-        if (document.getElementById('sso-login-btn')) return; // schon vorhanden
+        if (!target) return;
+        if (document.getElementById('sso-login-btn')) return;
 
         const btn = document.createElement('button');
         btn.id = 'sso-login-btn';
@@ -33,7 +33,6 @@
     }
 })();
 
-// ---------- Admin-Einstellungen im Menue ----------
 PluginAPI.addMenuItem('SSO', '🔐', async function () {
     const m = document.createElement('div');
     m.className = 'modal';
