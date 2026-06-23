@@ -1,37 +1,31 @@
-// SSO - frontend.js
-// pluginId wird automatisch vom Plugin-Loader bereitgestellt (kein eigener Wrapper noetig).
+if (document.readyState === 'loading') {
+    await new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve));
+}
 
-(async function _ssoInjectLoginButton() {
-    if (document.readyState === 'loading') {
-        await new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve));
-    }
-
-    try {
-        const resp = await PluginAPI.fetch(pluginId, '/public-config');
-        const cfg = await resp.json();
-        if (!cfg.configured) return;
-
+try {
+    const resp = await PluginAPI.fetch(pluginId, '/public-config');
+    const cfg = await resp.json();
+    if (cfg.configured) {
         const target =
             document.querySelector('#pinScreen') ||
             document.querySelector('.login-screen') ||
             document.querySelector('.pin-screen');
 
-        if (!target) return;
-        if (document.getElementById('sso-login-btn')) return;
-
-        const btn = document.createElement('button');
-        btn.id = 'sso-login-btn';
-        btn.className = 'btn';
-        btn.style.cssText = 'width:100%;margin-top:16px;display:flex;align-items:center;justify-content:center;gap:8px;';
-        btn.innerHTML = '🔐 ' + (cfg.button_text || 'Mit SSO anmelden');
-        btn.onclick = function () {
-            globalThis.location.href = '/api/plugin/' + pluginId + '/login';
-        };
-        target.appendChild(btn);
-    } catch (e) {
-        console.error('[sso] Login-Button konnte nicht eingefuegt werden:', e);
+        if (target && !document.getElementById('sso-login-btn')) {
+            const btn = document.createElement('button');
+            btn.id = 'sso-login-btn';
+            btn.className = 'btn';
+            btn.style.cssText = 'width:100%;margin-top:16px;display:flex;align-items:center;justify-content:center;gap:8px;';
+            btn.innerHTML = '🔐 ' + (cfg.button_text || 'Mit SSO anmelden');
+            btn.onclick = function () {
+                globalThis.location.href = '/api/plugin/' + pluginId + '/login';
+            };
+            target.appendChild(btn);
+        }
     }
-})();
+} catch (e) {
+    console.error('[sso] Login-Button konnte nicht eingefuegt werden:', e);
+}
 
 PluginAPI.addMenuItem('SSO', '🔐', async function () {
     const m = document.createElement('div');
