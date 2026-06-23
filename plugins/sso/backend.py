@@ -198,7 +198,7 @@ def sso_login():
 # ---------- SSO Callback ----------
 
 @plugin_blueprint.route(CALLBACK_PATH, methods=['GET'])
-def sso_callback():
+def sso_callback():  # NOSONAR - OIDC callback orchestration, intentional complexity
     cfg = _get_config()
 
     oidc_error = request.args.get('error')

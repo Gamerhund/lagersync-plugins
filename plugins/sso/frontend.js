@@ -1,7 +1,11 @@
 // SSO - frontend.js
 // pluginId wird automatisch vom Plugin-Loader bereitgestellt (kein eigener Wrapper noetig).
 
-async function _ssoInjectLoginButton() {
+(async function _ssoInjectLoginButton() {
+    if (document.readyState === 'loading') {
+        await new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve));
+    }
+
     try {
         const resp = await PluginAPI.fetch(pluginId, '/public-config');
         const cfg = await resp.json();
@@ -27,13 +31,7 @@ async function _ssoInjectLoginButton() {
     } catch (e) {
         console.error('[sso] Login-Button konnte nicht eingefuegt werden:', e);
     }
-}
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', _ssoInjectLoginButton);
-} else {
-    _ssoInjectLoginButton();
-}
+})();
 
 // ---------- Admin-Einstellungen im Menue ----------
 PluginAPI.addMenuItem('SSO', '🔐', async function () {
