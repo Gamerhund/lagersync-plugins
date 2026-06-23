@@ -11,8 +11,6 @@
   let _activeRequestTimeoutId = null;
   let _activeLoadingId = null;
 
-  // ─── Utility-Funktionen (Duplikate reduzieren) ─────────────────
-
   function _createModal(id) {
     let m = document.getElementById(id);
     if (m) { m.remove(); }
@@ -79,8 +77,6 @@
       <div style="${bgColor};padding:10px 16px;border-radius:${radius};max-width:80%;white-space:pre-wrap${lineHeight}">${_kiEsc(msg)}</div>
     </div>`;
   }
-
-  // ─── Menu Entry ──────────────────────────────────────────────
 
   PluginAPI.addMenuItem('KI-Assistent', '🤖', function() {
     openKIChat();
@@ -338,7 +334,7 @@
     }
   }
 
-  globalThis._kiSendMessage = async function() { // NOSONAR - UI handler, intentional complexity
+  globalThis._kiSendMessage = async function() {
     const input = document.getElementById('kiInput');
     const msg = input.value.trim();
     if (!msg) return;
