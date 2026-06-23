@@ -15,6 +15,7 @@ Offizieller Plugin-Marktplatz für [LagerSync](https://lagersync.de). Erweitere 
 | [**ki-assistent**](plugins/ki-assistent/) | KI-Chat mit Ollama & OpenAI-Integration. Kann Lagerbestände abfragen und Bestandsänderungen vornehmen. | ✅ Verifiziert |
 | [**low_stock_notifications**](plugins/low_stock_notifications/) | Benachrichtigungen per Telegram, Discord, Webhook oder E-Mail bei Unterschreitung des Mindestbestands. | ✅ Verifiziert |
 | [**pro-design**](plugins/pro-design/) | Professionelle Design-Optionen und Themes für deine Lagerverwaltung. | ✅ Verifiziert |
+| [**sso**](plugins/sso/) | Single Sign-On per OpenID Connect (Authentik, Keycloak, Entra ID, etc.) mit konfigurierbarem Username-Claim, Scope, Logout und Debug-Modus. | ✅ Verifiziert |
 
 ---
 

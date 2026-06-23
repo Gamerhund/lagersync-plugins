@@ -1,9 +1,9 @@
 {
   "name": "SSO",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "Gamerhund",
-  "description": "Single Sign-On per OpenID Connect. Funktioniert mit jedem OIDC-kompatiblen Provider (z.B. Authentik, Keycloak, Auth0, Microsoft Entra ID) per automatischer Discovery. Issuer-URL, Client-ID, Client-Secret und Button-Text werden nach der Installation unter Einstellungen konfiguriert - keine Zugangsdaten im Code.",
-  "verified": true,
+  "description": "Single Sign-On per OpenID Connect mit konfigurierbarem Username-Claim, Nonce, Logout, Scope und verbesserter Sicherheit. Funktioniert mit jedem OIDC-Provider.",
+  "verified": false,
   "enabled": false,
   "permissions": ["users.read", "users.write", "db.read", "db.write", "system.network"]
 }
