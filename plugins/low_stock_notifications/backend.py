@@ -98,37 +98,37 @@ def _get_notify_settings():
         conn.close()
 
 
-def _check_pid_disabled_in_settings_obj(pid: str, obj) -> bool:  # NOSONAR - settings validation, intentional complexity
+def _is_entry_disabled(entry, pid):
+    if isinstance(entry, dict) and entry.get('enabled') is False:
+        return True
+    if entry is False:
+        return True
+    if isinstance(entry, dict) and (entry.get('id') == pid or entry.get('name') == pid):
+        if entry.get('enabled') is False:
+            return True
+    return False
+
+
+def _check_pid_disabled_in_settings_obj(pid: str, obj) -> bool:
     """Check if plugin is explicitly disabled in a parsed settings object. Returns True if disabled."""
     try:
         if isinstance(obj, dict):
             if pid in obj:
-                entry = obj.get(pid)
-                if isinstance(entry, dict) and entry.get('enabled') is False:
+                if _is_entry_disabled(obj.get(pid), pid):
                     return True
-                if entry is False:
+            for vv in obj.values():
+                if _is_entry_disabled(vv, pid):
                     return True
-            for _kk, vv in obj.items():
-                if isinstance(vv, dict) and (vv.get('id') == pid or vv.get('name') == pid):
-                    if vv.get('enabled') is False:
-                        return True
         elif isinstance(obj, list):
             for it in obj:
-                if isinstance(it, dict) and (it.get('id') == pid or it.get('name') == pid):
-                    if it.get('enabled') is False:
-                        return True
+                if _is_entry_disabled(it, pid):
+                    return True
     except Exception:
         pass
     return False
 
 
-def _is_plugin_manager_enabled(plugin_id: str) -> bool:  # NOSONAR - enablement validation, intentional complexity
-    """Best-effort check if the plugin is enabled in the host's plugin manager.
-    If we cannot determine state, assume enabled to avoid breaking functionality.
-    """
-    pid = str(plugin_id or '').strip()
-    if not pid:
-        return True
+def _check_plugin_in_db_settings(pid):
     conn = get_db_connection()
     c = conn.cursor()
     try:
@@ -155,7 +155,10 @@ def _is_plugin_manager_enabled(plugin_id: str) -> bool:  # NOSONAR - enablement 
             conn.close()
         except Exception:
             pass
+    return None
 
+
+def _check_plugin_meta_file():
     try:
         base_dir = os.path.dirname(__file__)
         meta_path = os.path.join(base_dir, 'plugin.json')
@@ -166,6 +169,25 @@ def _is_plugin_manager_enabled(plugin_id: str) -> bool:  # NOSONAR - enablement 
                 return False
     except Exception:
         pass
+    return None
+
+
+def _is_plugin_manager_enabled(plugin_id: str) -> bool:
+    """Best-effort check if the plugin is enabled in the host's plugin manager.
+    If we cannot determine state, assume enabled to avoid breaking functionality.
+    """
+    pid = str(plugin_id or '').strip()
+    if not pid:
+        return True
+    
+    db_result = _check_plugin_in_db_settings(pid)
+    if db_result is False:
+        return False
+    
+    meta_result = _check_plugin_meta_file()
+    if meta_result is False:
+        return False
+    
     return True
 
 
@@ -353,30 +375,25 @@ def _send_email(settings, subject, body):
         return False, str(e)
 
 
-def _check_and_notify():  # NOSONAR - orchestration function, intentional complexity
-    settings = _get_notify_settings()
-    if not settings.get("enabled", True):
-        return
+def _pick(row, key, idx):
+    try:
+        if isinstance(row, (list, tuple)):
+            return row[idx]
+    except Exception:
+        pass
+    try:
+        if isinstance(row, dict):
+            return row.get(key)
+    except Exception:
+        pass
+    try:
+        return row[key]
+    except Exception:
+        pass
+    return None
 
-    username_filter = str(settings.get("notify_username_filter", "") or "").strip()
 
-    def _pick(row, key, idx):
-        try:
-            if isinstance(row, (list, tuple)):
-                return row[idx]
-        except Exception:
-            pass
-        try:
-            if isinstance(row, dict):
-                return row.get(key)
-        except Exception:
-            pass
-        try:
-            return row[key]
-        except Exception:
-            pass
-        return None
-
+def _get_allowed_ip_labels(username_filter):
     allowed_ip_labels = {}
     try:
         conn_l = get_db_connection()
@@ -397,8 +414,11 @@ def _check_and_notify():  # NOSONAR - orchestration function, intentional comple
             if ip and label:
                 allowed_ip_labels[ip] = label
     except Exception:
-        allowed_ip_labels = {}
+        pass
+    return allowed_ip_labels
 
+
+def _get_low_stock_items():
     conn = get_db_connection()
     c = conn.cursor()
     try:
@@ -411,114 +431,112 @@ def _check_and_notify():  # NOSONAR - orchestration function, intentional comple
         low_stock = c.fetchall()
     except Exception as e:
         print(f"[Notifications] DB-Fehler: {e}")
-        return
+        return []
     finally:
         conn.close()
+    return low_stock if low_stock else []
 
-    if not low_stock:
-        low_stock = []
 
-    current_ids = {r[0] for r in low_stock}
-    last_ids = set(settings.get("last_low_stock", []))
-
-    new_low = [r for r in low_stock if r[0] not in last_ids]
-
-    if not new_low:
-        settings["last_low_stock"] = list(current_ids)
-
+def _check_new_logins(settings, username_filter, allowed_ip_labels):
     login_msgs = []
-    if settings.get("notify_login", True):
+    if not settings.get("notify_login", True):
+        return login_msgs
+    
+    try:
+        conn_s = get_db_connection()
+        c_s = conn_s.cursor()
         try:
-            conn_s = get_db_connection()
-            c_s = conn_s.cursor()
-            try:
-                if username_filter:
-                    c_s.execute("SELECT sid, username, created, ip, ua FROM sessions WHERE lower(username)=lower(?) ORDER BY created ASC", (username_filter,))
-                else:
-                    c_s.execute("SELECT sid, username, created, ip, ua FROM sessions ORDER BY created ASC")
-                srows = c_s.fetchall() or []
-            finally:
-                conn_s.close()
-            last_sids = set(settings.get("last_sessions", []) or [])
-            current_sids = []
-            for r in srows:
-                sid = _pick(r, 'sid', 0)
-                uname = _pick(r, 'username', 1)
-                ip = _pick(r, 'ip', 3)
-                ua = _pick(r, 'ua', 4)
-                sid = str(sid or '').strip()
-                if not sid:
-                    continue
-                current_sids.append(sid)
-                if sid in last_sids:
-                    continue
-                uname = str(uname or '').strip() or 'Unbekannt'
-                ip = str(ip or '').strip() or 'IP unbekannt'
-                ua = str(ua or '').strip()
-                label = allowed_ip_labels.get(ip, '')
-                extra = f" · {ua}" if ua else ""
-                if label:
-                    login_msgs.append(f"🔐 Anmeldung: {uname} · {label} ({ip}){extra}")
-                else:
-                    login_msgs.append(f"🔐 Anmeldung: {uname} · {ip}{extra}")
-            settings["last_sessions"] = list(current_sids)[-500:]
-        except Exception:
-            pass
+            if username_filter:
+                c_s.execute("SELECT sid, username, created, ip, ua FROM sessions WHERE lower(username)=lower(?) ORDER BY created ASC", (username_filter,))
+            else:
+                c_s.execute("SELECT sid, username, created, ip, ua FROM sessions ORDER BY created ASC")
+            srows = c_s.fetchall() or []
+        finally:
+            conn_s.close()
+        last_sids = set(settings.get("last_sessions", []) or [])
+        current_sids = []
+        for r in srows:
+            sid = _pick(r, 'sid', 0)
+            uname = _pick(r, 'username', 1)
+            ip = _pick(r, 'ip', 3)
+            ua = _pick(r, 'ua', 4)
+            sid = str(sid or '').strip()
+            if not sid:
+                continue
+            current_sids.append(sid)
+            if sid in last_sids:
+                continue
+            uname = str(uname or '').strip() or 'Unbekannt'
+            ip = str(ip or '').strip() or 'IP unbekannt'
+            ua = str(ua or '').strip()
+            label = allowed_ip_labels.get(ip, '')
+            extra = f" · {ua}" if ua else ""
+            if label:
+                login_msgs.append(f"🔐 Anmeldung: {uname} · {label} ({ip}){extra}")
+            else:
+                login_msgs.append(f"🔐 Anmeldung: {uname} · {ip}{extra}")
+        settings["last_sessions"] = list(current_sids)[-500:]
+    except Exception:
+        pass
+    return login_msgs
 
+
+def _check_new_trusted_devices(settings, username_filter):
     trusted_msgs = []
     notify_trusted = settings.get("notify_new_trusted_device", True)
     notify_trusted_manual = settings.get("notify_new_trusted_device_manual", True)
-    if notify_trusted or notify_trusted_manual:
+    if not (notify_trusted or notify_trusted_manual):
+        return trusted_msgs
+    
+    try:
+        conn2 = get_db_connection()
+        c2 = conn2.cursor()
         try:
-            conn2 = get_db_connection()
-            c2 = conn2.cursor()
+            if username_filter:
+                c2.execute("SELECT username, ip, COALESCE(label,'') as label FROM user_allowed_ips WHERE lower(username)=lower(?)", (username_filter,))
+            else:
+                c2.execute("SELECT username, ip, COALESCE(label,'') as label FROM user_allowed_ips")
+            rows = c2.fetchall() or []
+        finally:
+            conn2.close()
+        last_raw = settings.get("last_allowed_ips", []) or []
+        last = set()
+        for x in last_raw:
             try:
-                if username_filter:
-                    c2.execute("SELECT username, ip, COALESCE(label,'') as label FROM user_allowed_ips WHERE lower(username)=lower(?)", (username_filter,))
-                else:
-                    c2.execute("SELECT username, ip, COALESCE(label,'') as label FROM user_allowed_ips")
-                rows = c2.fetchall() or []
-            finally:
-                conn2.close()
-            last_raw = settings.get("last_allowed_ips", []) or []
-            last = set()
-            for x in last_raw:
-                try:
-                    s = str(x or '')
-                except Exception:
-                    continue
-                if '|' in s:
-                    u, ipx = s.split('|', 1)
-                    last.add(u.strip().lower() + '|' + ipx.strip())
-                else:
-                    last.add(s.strip())
-            current = set()
-            for r in rows:
-                uname = _pick(r, 'username', 0)
-                ip = _pick(r, 'ip', 1)
-                label = _pick(r, 'label', 2)
-                uname = str(uname or '').strip()
-                ip = str(ip or '').strip()
-                label = str(label or '').strip()
-                if not uname or not ip:
-                    continue
-                key = uname.lower() + "|" + ip
-                current.add(key)
-                if key in last:
-                    continue
-                is_manual = bool(label)
-                if is_manual and notify_trusted_manual:
-                    trusted_msgs.append(f"✅ Neues vertrauenswürdiges Gerät/IP manuell hinzugefügt: {uname} · {ip} ({label})")
-                elif (not is_manual) and notify_trusted:
-                    trusted_msgs.append(f"✅ Neues vertrauenswürdiges Gerät/IP automatisch freigegeben: {uname} · {ip}")
-            settings["last_allowed_ips"] = list(current)
-        except Exception:
-            pass
+                s = str(x or '')
+            except Exception:
+                continue
+            if '|' in s:
+                u, ipx = s.split('|', 1)
+                last.add(u.strip().lower() + '|' + ipx.strip())
+            else:
+                last.add(s.strip())
+        current = set()
+        for r in rows:
+            uname = _pick(r, 'username', 0)
+            ip = _pick(r, 'ip', 1)
+            label = _pick(r, 'label', 2)
+            uname = str(uname or '').strip()
+            ip = str(ip or '').strip()
+            label = str(label or '').strip()
+            if not uname or not ip:
+                continue
+            key = uname.lower() + "|" + ip
+            current.add(key)
+            if key in last:
+                continue
+            is_manual = bool(label)
+            if is_manual and notify_trusted_manual:
+                trusted_msgs.append(f"✅ Neues vertrauenswürdiges Gerät/IP manuell hinzugefügt: {uname} · {ip} ({label})")
+            elif (not is_manual) and notify_trusted:
+                trusted_msgs.append(f"✅ Neues vertrauenswürdiges Gerät/IP automatisch freigegeben: {uname} · {ip}")
+        settings["last_allowed_ips"] = list(current)
+    except Exception:
+        pass
+    return trusted_msgs
 
-    if (not new_low) and (not trusted_msgs) and (not login_msgs):
-        _save_notify_settings(settings)
-        return
 
+def _build_notification_message(new_low, trusted_msgs, login_msgs):
     message_parts = []
     subject_parts = []
     if new_low:
@@ -536,20 +554,20 @@ def _check_and_notify():  # NOSONAR - orchestration function, intentional comple
         subject_parts.append("Neue Anmeldung")
     message = "\n\n".join([p for p in message_parts if p])
     subject = " · ".join([p for p in subject_parts if p]) or "Lagerverwaltung Benachrichtigung"
+    return message, subject
 
+
+def _send_notifications(settings, message, subject, new_low):
     errors = []
-
     if settings.get("telegram_enabled"):
         _, err = _send_telegram(settings, message)
         if err:
             errors.append(f"Telegram: {err}")
-
     if settings.get("discord_enabled"):
         discord_msg = message.replace("<b>", "**").replace("</b>", "**")
         _, err = _send_discord(settings, discord_msg)
         if err:
             errors.append(f"Discord: {err}")
-
     if settings.get("webhook_enabled"):
         data = {
             "type": "low_stock",
@@ -560,15 +578,40 @@ def _check_and_notify():  # NOSONAR - orchestration function, intentional comple
         _, err = _send_webhook(settings, data)
         if err:
             errors.append(f"Webhook: {err}")
-
     if settings.get("email_enabled"):
         body = message.replace("<b>", "").replace("</b>", "")
         _, err = _send_email(settings, subject, body)
         if err:
             errors.append(f"E-Mail: {err}")
-
     if errors:
         print(f"[Notifications] Fehler: {', '.join(errors)}")
+
+
+def _check_and_notify():
+    settings = _get_notify_settings()
+    if not settings.get("enabled", True):
+        return
+
+    username_filter = str(settings.get("notify_username_filter", "") or "").strip()
+    allowed_ip_labels = _get_allowed_ip_labels(username_filter)
+    low_stock = _get_low_stock_items()
+
+    current_ids = {r[0] for r in low_stock}
+    last_ids = set(settings.get("last_low_stock", []))
+    new_low = [r for r in low_stock if r[0] not in last_ids]
+
+    if not new_low:
+        settings["last_low_stock"] = list(current_ids)
+
+    login_msgs = _check_new_logins(settings, username_filter, allowed_ip_labels)
+    trusted_msgs = _check_new_trusted_devices(settings, username_filter)
+
+    if (not new_low) and (not trusted_msgs) and (not login_msgs):
+        _save_notify_settings(settings)
+        return
+
+    message, subject = _build_notification_message(new_low, trusted_msgs, login_msgs)
+    _send_notifications(settings, message, subject, new_low)
 
     settings["last_low_stock"] = list(current_ids)
     _save_notify_settings(settings)
