@@ -11,19 +11,85 @@
   let _activeRequestTimeoutId = null;
   let _activeLoadingId = null;
 
+  // ─── Utility-Funktionen (Duplikate reduzieren) ─────────────────
+
+  function _createModal(id) {
+    let m = document.getElementById(id);
+    if (m) { m.remove(); }
+    m = document.createElement('div');
+    m.id = id;
+    m.className = 'modal';
+    m.style.display = 'flex';
+    document.body.appendChild(m);
+    m.addEventListener('click', function(e) { if (e.target === m) m.remove(); });
+    return m;
+  }
+
+  function _removeModal(id) {
+    const m = document.getElementById(id);
+    if (m) m.remove();
+  }
+
+  function _kiEsc(str) {
+    return String(str || '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;');
+  }
+
+  function _setLocalStorage(key, value) {
+    try {
+      localStorage.setItem(key, value);
+    } catch(e) {
+      console.warn('[KI] Could not save to localStorage:', e);
+    }
+  }
+
+  function _getLocalStorage(key, defaultValue = null) {
+    try {
+      return localStorage.getItem(key) || defaultValue;
+    } catch(e) {
+      console.warn('[KI] Could not read from localStorage:', e);
+      return defaultValue;
+    }
+  }
+
+  function _getSettingsObject() {
+    return {
+      provider: document.querySelector('input[name="kiProvider"]:checked')?.value || 'ollama',
+      ollama_url: document.getElementById('kiOllamaUrl')?.value || '',
+      ollama_model: document.getElementById('kiOllamaModel')?.value || '',
+      api_url: document.getElementById('kiApiUrl')?.value || '',
+      api_key: document.getElementById('kiApiKey')?.value || '',
+      api_model: document.getElementById('kiApiModel')?.value || '',
+      timeout: Number.parseInt(document.getElementById('kiTimeout')?.value, 10) || 120,
+      product_limit: Number.parseInt(document.getElementById('kiProductLimit')?.value, 10) || 50,
+      system_instruction: document.getElementById('kiSystemInstruction')?.value || ''
+    };
+  }
+
+  function _renderChatBubble(msg, isUser) {
+    const bgColor = isUser ? 'background:#4a90e2;color:#fff' : 'background:rgba(255,255,255,0.08)';
+    const justify = isUser ? 'flex-end' : 'flex-start';
+    const radius = isUser ? '16px 16px 4px 16px' : '16px 16px 16px 4px';
+    const lineHeight = isUser ? '' : ';line-height:1.5';
+    
+    return `<div style="display:flex;justify-content:${justify}">
+      <div style="${bgColor};padding:10px 16px;border-radius:${radius};max-width:80%;white-space:pre-wrap${lineHeight}">${_kiEsc(msg)}</div>
+    </div>`;
+  }
+
+  // ─── Menu Entry ──────────────────────────────────────────────
+
   PluginAPI.addMenuItem('KI-Assistent', '🤖', function() {
     openKIChat();
   });
 
   function openKIChat() {
     const id = 'kiChatModal';
-    let m = document.getElementById(id);
-    if (m) { m.remove(); }
+    const m = _createModal(id);
 
-    m = document.createElement('div');
-    m.id = id;
-    m.className = 'modal';
-    m.style.display = 'flex';
     m.innerHTML = `
       <div class="modal-content" style="max-width:800px;width:95vw;height:85vh;display:flex;flex-direction:column">
         <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.1)">
@@ -62,16 +128,10 @@
       </div>
     `;
 
-    document.body.appendChild(m);
-    m.addEventListener('click', function(e) { if (e.target === m) m.remove(); });
-
     const input = document.getElementById('kiInput');
-    try {
-      const draft = localStorage.getItem('ki_chat_draft') || '';
-      if (draft) input.value = draft;
-    } catch (e) {
-      console.warn('[KI] Could not load draft:', e);
-    }
+    const draft = _getLocalStorage('ki_chat_draft', '');
+    if (draft) input.value = draft;
+
     input.addEventListener('keydown', function(e) {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
@@ -79,11 +139,7 @@
       }
     });
     input.addEventListener('input', function() {
-      try {
-        localStorage.setItem('ki_chat_draft', input.value || '');
-      } catch (e) {
-        console.warn('[KI] Could not save draft:', e);
-      }
+      _setLocalStorage('ki_chat_draft', input.value || '');
     });
 
     _kiLoadSettings();
@@ -93,18 +149,13 @@
 
   globalThis._kiOpenSettings = async function() {
     const id = 'kiSettingsModal';
-    let m = document.getElementById(id);
-    if (m) { m.remove(); }
+    const m = _createModal(id);
 
     if (!_settings) {
       await _kiLoadSettings();
     }
     const s = _settings || {};
 
-    m = document.createElement('div');
-    m.id = id;
-    m.className = 'modal';
-    m.style.display = 'flex';
     m.innerHTML = `
       <div class="modal-content" style="max-width:550px;width:95vw;max-height:90vh;overflow-y:auto">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
@@ -180,9 +231,6 @@
         <div id="kiTestResult" style="margin-top:12px;padding:10px;border-radius:8px;display:none"></div>
       </div>
     `;
-
-    document.body.appendChild(m);
-    m.addEventListener('click', function(e) { if (e.target === m) m.remove(); });
   };
 
   globalThis._kiToggleProvider = function() {
@@ -215,18 +263,7 @@
     result.style.background = 'rgba(255,255,255,0.05)';
     result.innerHTML = '⏳ Teste Verbindung...';
 
-    const provider = document.querySelector('input[name="kiProvider"]:checked').value;
-    const settings = {
-      provider: provider,
-      ollama_url: document.getElementById('kiOllamaUrl')?.value || '',
-      ollama_model: document.getElementById('kiOllamaModel')?.value || '',
-      api_url: document.getElementById('kiApiUrl')?.value || '',
-      api_key: document.getElementById('kiApiKey')?.value || '',
-      api_model: document.getElementById('kiApiModel')?.value || '',
-      timeout: Number.parseInt(document.getElementById('kiTimeout')?.value, 10) || 120,
-      product_limit: Number.parseInt(document.getElementById('kiProductLimit')?.value, 10) || 50,
-      system_instruction: document.getElementById('kiSystemInstruction')?.value || ''
-    };
+    const settings = _getSettingsObject();
 
     try {
       const resp = await PluginAPI.fetch(pluginId, '/test', {
@@ -250,19 +287,8 @@
   };
 
   globalThis._kiSaveSettings = async function() {
-    const provider = document.querySelector('input[name="kiProvider"]:checked').value;
-    const settings = {
-      provider: provider,
-      ollama_url: document.getElementById('kiOllamaUrl')?.value || 'http://localhost:11434',
-      ollama_model: document.getElementById('kiOllamaModel')?.value || 'llama3.2',
-      api_url: document.getElementById('kiApiUrl')?.value || '',
-      api_key: document.getElementById('kiApiKey')?.value || '',
-      api_model: document.getElementById('kiApiModel')?.value || 'gpt-4o-mini',
-      timeout: Number.parseInt(document.getElementById('kiTimeout')?.value, 10) || 120,
-      product_limit: Number.parseInt(document.getElementById('kiProductLimit')?.value, 10) || 50,
-      system_instruction: document.getElementById('kiSystemInstruction')?.value || '',
-      enabled: true
-    };
+    const settings = _getSettingsObject();
+    settings.enabled = true;
 
     try {
       const resp = await PluginAPI.fetch(pluginId, '/settings', {
@@ -323,11 +349,7 @@
     const container = document.getElementById('kiChatMessages');
     if (!container) return;
 
-    container.innerHTML += `
-      <div style="display:flex;justify-content:flex-end">
-        <div style="background:#4a90e2;color:#fff;padding:10px 16px;border-radius:16px 16px 4px 16px;max-width:80%;white-space:pre-wrap">${_kiEsc(msg)}</div>
-      </div>
-    `;
+    container.innerHTML += _renderChatBubble(msg, true);
 
     const loadingId = 'kiLoading_' + Date.now();
     _activeLoadingId = loadingId;
@@ -384,11 +406,7 @@
           _kiSaveSession(msg);
         }
 
-        container.innerHTML += `
-          <div style="display:flex;justify-content:flex-start">
-            <div style="background:rgba(255,255,255,0.08);padding:10px 16px;border-radius:16px 16px 16px 4px;max-width:80%;white-space:pre-wrap;line-height:1.5">${_kiEsc(response)}</div>
-          </div>
-        `;
+        container.innerHTML += _renderChatBubble(response, false);
       } else {
         container.innerHTML += `
           <div style="display:flex;justify-content:flex-start">
@@ -425,13 +443,8 @@
 
     if (_activeRequestController) {
       const cid = 'kiCloseConfirm';
-      let m = document.getElementById(cid);
-      if (m) m.remove();
+      const m = _createModal(cid);
 
-      m = document.createElement('div');
-      m.id = cid;
-      m.className = 'modal';
-      m.style.display = 'flex';
       m.innerHTML = `
         <div class="modal-content" style="max-width:520px;width:95vw">
           <h3 style="margin:0 0 10px 0">Laufende Anfrage</h3>
@@ -442,8 +455,6 @@
           </div>
         </div>
       `;
-      document.body.appendChild(m);
-      m.addEventListener('click', function(e) { if (e.target === m) m.remove(); });
       return;
     }
 
@@ -451,8 +462,8 @@
   };
 
   globalThis._kiCloseContinue = function() {
-    document.getElementById('kiCloseConfirm')?.remove();
-    document.getElementById('kiChatModal')?.remove();
+    _removeModal('kiCloseConfirm');
+    _removeModal('kiChatModal');
   };
 
   globalThis._kiCloseStop = function() {
@@ -471,26 +482,17 @@
     const loading = _activeLoadingId ? document.getElementById(_activeLoadingId) : null;
     if (loading) loading.remove();
     _activeLoadingId = null;
-    document.getElementById('kiCloseConfirm')?.remove();
-    document.getElementById('kiChatModal')?.remove();
+    _removeModal('kiCloseConfirm');
+    _removeModal('kiChatModal');
   };
-
-  function _kiEsc(str) {
-    return String(str || '')
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;');
-  }
 
   function _kiLoadSessions() {
     try {
-      const stored = localStorage.getItem('ki_chat_sessions');
-      if (stored) {
-        _chatSessions = JSON.parse(stored);
-      }
+      const stored = _getLocalStorage('ki_chat_sessions', '[]');
+      _chatSessions = JSON.parse(stored);
     } catch(e) {
       console.error('[KI] Sessions laden fehlgeschlagen:', e);
+      _chatSessions = [];
     }
   }
 
@@ -509,11 +511,7 @@
       _chatSessions = _chatSessions.slice(0, 20);
     }
     
-    try {
-      localStorage.setItem('ki_chat_sessions', JSON.stringify(_chatSessions));
-    } catch(e) {
-      console.warn('[KI] Could not save sessions:', e);
-    }
+    _setLocalStorage('ki_chat_sessions', JSON.stringify(_chatSessions));
   }
 
   globalThis._kiToggleHistory = function() {
@@ -546,19 +544,19 @@
     ).join('') + '<div onclick="_kiNewChat()" style="padding:10px 12px;cursor:pointer;font-size:0.85em;color:#4a90e2;text-align:center">+ Neuer Chat</div>';
   };
 
+  function _updateHistoryDisplay() {
+    _kiToggleHistory();
+    _kiToggleHistory();
+  }
+
   globalThis._kiRenameSession = function(index) {
     const session = _chatSessions[index];
     if (!session) return;
     const newTitle = prompt('Neuer Name für den Chat:', session.title || '');
     if (newTitle === null) return;
     session.title = String(newTitle).trim() || session.title;
-    try {
-      localStorage.setItem('ki_chat_sessions', JSON.stringify(_chatSessions));
-    } catch (e) {
-      console.warn('[KI] Could not save sessions:', e);
-    }
-    _kiToggleHistory();
-    _kiToggleHistory();
+    _setLocalStorage('ki_chat_sessions', JSON.stringify(_chatSessions));
+    _updateHistoryDisplay();
   };
 
   globalThis._kiDeleteSession = function(index) {
@@ -567,13 +565,8 @@
     const ok = confirm('Chat wirklich löschen?');
     if (!ok) return;
     _chatSessions.splice(index, 1);
-    try {
-      localStorage.setItem('ki_chat_sessions', JSON.stringify(_chatSessions));
-    } catch (e) {
-      console.warn('[KI] Could not save sessions:', e);
-    }
-    _kiToggleHistory();
-    _kiToggleHistory();
+    _setLocalStorage('ki_chat_sessions', JSON.stringify(_chatSessions));
+    _updateHistoryDisplay();
   };
 
   globalThis._kiLoadSession = function(index) {
@@ -587,11 +580,7 @@
     
     container.innerHTML = '';
     session.history.forEach(msg => {
-      if (msg.role === 'user') {
-        container.innerHTML += '<div style="display:flex;justify-content:flex-end"><div style="background:#4a90e2;color:#fff;padding:10px 16px;border-radius:16px 16px 4px 16px;max-width:80%;white-space:pre-wrap">' + _kiEsc(msg.content) + '</div></div>';
-      } else {
-        container.innerHTML += '<div style="display:flex;justify-content:flex-start"><div style="background:rgba(255,255,255,0.08);padding:10px 16px;border-radius:16px 16px 16px 4px;max-width:80%;white-space:pre-wrap;line-height:1.5">' + _kiEsc(msg.content) + '</div></div>';
-      }
+      container.innerHTML += _renderChatBubble(msg.content, msg.role === 'user');
     });
     
     document.getElementById('kiHistoryDropdown').style.display = 'none';
