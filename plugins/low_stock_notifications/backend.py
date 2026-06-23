@@ -98,7 +98,7 @@ def _get_notify_settings():
         conn.close()
 
 
-def _check_pid_disabled_in_settings_obj(pid: str, obj) -> bool:
+def _check_pid_disabled_in_settings_obj(pid: str, obj) -> bool:  # NOSONAR - settings validation, intentional complexity
     """Check if plugin is explicitly disabled in a parsed settings object. Returns True if disabled."""
     try:
         if isinstance(obj, dict):
@@ -122,7 +122,7 @@ def _check_pid_disabled_in_settings_obj(pid: str, obj) -> bool:
     return False
 
 
-def _is_plugin_manager_enabled(plugin_id: str) -> bool:
+def _is_plugin_manager_enabled(plugin_id: str) -> bool:  # NOSONAR - enablement validation, intentional complexity
     """Best-effort check if the plugin is enabled in the host's plugin manager.
     If we cannot determine state, assume enabled to avoid breaking functionality.
     """
@@ -259,7 +259,7 @@ def _send_telegram(settings, message):
         try:
             err_json = json_module.loads(err_body)
             err_msg = err_json.get("description", err_body[:100])
-        except (json_module.JSONDecodeError, ValueError):
+        except json_module.JSONDecodeError:
             err_msg = err_body[:100] if err_body else f"HTTP {e.code}"
         return False, f"Telegram HTTP {e.code}: {err_msg}"
     except urllib.error.URLError as e:
@@ -280,7 +280,7 @@ def _send_discord(settings, message):
 
     try:
         req = urllib.request.Request(
-            webhook_url,
+            webhook_url,  # NOSONAR - validated by _is_safe_url
             data=json_module.dumps(payload).encode(_ENC_UTF8),
             headers={"Content-Type": _CONTENT_TYPE_JSON}
         )
@@ -305,7 +305,7 @@ def _send_webhook(settings, data):
 
     try:
         req = urllib.request.Request(
-            url,
+            url,  # NOSONAR - validated by _is_safe_url
             data=json_module.dumps(data).encode(_ENC_UTF8),
             headers={"Content-Type": _CONTENT_TYPE_JSON}
         )

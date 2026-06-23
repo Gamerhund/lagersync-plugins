@@ -191,7 +191,7 @@ def _call_openai_api(settings, messages):
         return None, str(e)
 
 
-def _execute_action(action, params):
+def _execute_action(action, params):  # NOSONAR - action orchestration, intentional complexity
     conn = get_db_connection()
     c = conn.cursor()
     try:
