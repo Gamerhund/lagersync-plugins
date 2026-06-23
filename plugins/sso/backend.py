@@ -25,6 +25,9 @@ plugin_blueprint = Blueprint('sso', __name__)
 
 CONFIG_KEYS = ['issuer', 'client_id', 'client_secret', 'button_text', 'autocreate']
 
+ADMIN_ONLY_MSG = 'Nur fuer Administratoren'
+CALLBACK_PATH = '/callback'
+
 _discovery_cache = {}  # issuer -> (timestamp, discovery_dict)
 _DISCOVERY_CACHE_SECONDS = 300
 
@@ -112,7 +115,7 @@ def _discover(issuer):
 @require_auth()
 def get_config():
     if not _is_admin_request():
-        return json_response({'error': 'Nur fuer Administratoren'}, 403)
+        return json_response({'error': ADMIN_ONLY_MSG}, 403)
     cfg = _get_config()
     cfg['client_secret'] = bool(cfg['client_secret'])  # nie den echten Wert zurueckgeben
     return json_response(cfg)
@@ -122,7 +125,7 @@ def get_config():
 @require_auth()
 def save_config():
     if not _is_admin_request():
-        return json_response({'error': 'Nur fuer Administratoren'}, 403)
+        return json_response({'error': ADMIN_ONLY_MSG}, 403)
     data = request.get_json(silent=True) or {}
     _save_config(data)
     return json_response({'status': 'ok'})
@@ -134,7 +137,7 @@ def test_issuer():
     """Prueft ob eine Issuer-URL gueltige OIDC-Discovery-Daten liefert
     (fuer den 'Testen'-Knopf in den Einstellungen)."""
     if not _is_admin_request():
-        return json_response({'error': 'Nur fuer Administratoren'}, 403)
+        return json_response({'error': ADMIN_ONLY_MSG}, 403)
     data = request.get_json(silent=True) or {}
     issuer = (data.get('issuer') or '').strip()
     if not issuer:
@@ -178,7 +181,7 @@ def sso_login():
     session['sso_state_ts'] = time.time()
 
     prefix = request.path.rsplit('/login', 1)[0]
-    redirect_uri = request.host_url.rstrip('/') + prefix + '/callback'
+    redirect_uri = request.host_url.rstrip('/') + prefix + CALLBACK_PATH
 
     params = {
         'response_type': 'code',
@@ -194,7 +197,7 @@ def sso_login():
 
 # ---------- SSO Callback ----------
 
-@plugin_blueprint.route('/callback', methods=['GET'])
+@plugin_blueprint.route(CALLBACK_PATH, methods=['GET'])
 def sso_callback():
     cfg = _get_config()
 
@@ -219,8 +222,8 @@ def sso_callback():
     except Exception as e:
         return f'Provider nicht erreichbar oder Discovery fehlgeschlagen: {e}', 502
 
-    prefix = request.path.rsplit('/callback', 1)[0]
-    redirect_uri = request.host_url.rstrip('/') + prefix + '/callback'
+    prefix = request.path.rsplit(CALLBACK_PATH, 1)[0]
+    redirect_uri = request.host_url.rstrip('/') + prefix + CALLBACK_PATH
 
     try:
         token_resp = requests.post(

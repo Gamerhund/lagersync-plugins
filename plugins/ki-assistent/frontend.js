@@ -69,7 +69,9 @@
     try {
       const draft = localStorage.getItem('ki_chat_draft') || '';
       if (draft) input.value = draft;
-    } catch (e) {}
+    } catch (e) {
+      console.warn('[KI] Could not load draft:', e);
+    }
     input.addEventListener('keydown', function(e) {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
@@ -79,7 +81,9 @@
     input.addEventListener('input', function() {
       try {
         localStorage.setItem('ki_chat_draft', input.value || '');
-      } catch (e) {}
+      } catch (e) {
+        console.warn('[KI] Could not save draft:', e);
+      }
     });
 
     _kiLoadSettings();
@@ -87,7 +91,7 @@
     _isOpen = true;
   }
 
-  window._kiOpenSettings = async function() {
+  globalThis._kiOpenSettings = async function() {
     const id = 'kiSettingsModal';
     let m = document.getElementById(id);
     if (m) { m.remove(); }
@@ -110,7 +114,7 @@
 
         <div style="margin-bottom:20px">
           <label style="display:flex;align-items:center;gap:10px;margin-bottom:12px;cursor:pointer">
-            <input type="radio" name="kiProvider" value="ollama" ${s.provider !== 'api' ? 'checked' : ''} onchange="_kiToggleProvider()">
+            <input type="radio" name="kiProvider" value="ollama" ${s.provider === 'ollama' ? 'checked' : ''} onchange="_kiToggleProvider()">
             <span><strong>Ollama</strong> <span style="opacity:0.5;font-size:0.85em">(Lokal, kostenlos)</span></span>
           </label>
           <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
@@ -134,7 +138,7 @@
           </div>
         </div>
 
-        <div id="kiApiSettings" style="${s.provider !== 'api' ? 'display:none' : ''}">
+        <div id="kiApiSettings" style="${s.provider === 'api' ? 'display:block' : 'display:none'}">
           <div style="margin-bottom:14px">
             <label style="display:block;margin-bottom:6px;font-weight:600;font-size:0.9em">API URL</label>
             <input id="kiApiUrl" value="${s.api_url || 'https://api.openai.com/v1/chat/completions'}" placeholder="https://api.openai.com/v1/chat/completions" style="width:100%;padding:10px;border-radius:8px">
@@ -181,13 +185,13 @@
     m.addEventListener('click', function(e) { if (e.target === m) m.remove(); });
   };
 
-  window._kiToggleProvider = function() {
+  globalThis._kiToggleProvider = function() {
     const isApi = document.querySelector('input[name="kiProvider"]:checked').value === 'api';
     document.getElementById('kiOllamaSettings').style.display = isApi ? 'none' : 'block';
     document.getElementById('kiApiSettings').style.display = isApi ? 'block' : 'none';
   };
 
-  window._kiLoadOllamaModels = async function() {
+  globalThis._kiLoadOllamaModels = async function() {
     const container = document.getElementById('kiOllamaModels');
     container.innerHTML = '⏳ Lade Modelle...';
 
@@ -205,7 +209,7 @@
     }
   };
 
-  window._kiTestConnection = async function() {
+  globalThis._kiTestConnection = async function() {
     const result = document.getElementById('kiTestResult');
     result.style.display = 'block';
     result.style.background = 'rgba(255,255,255,0.05)';
@@ -219,8 +223,8 @@
       api_url: document.getElementById('kiApiUrl')?.value || '',
       api_key: document.getElementById('kiApiKey')?.value || '',
       api_model: document.getElementById('kiApiModel')?.value || '',
-      timeout: parseInt(document.getElementById('kiTimeout')?.value) || 120,
-      product_limit: parseInt(document.getElementById('kiProductLimit')?.value) || 50,
+      timeout: Number.parseInt(document.getElementById('kiTimeout')?.value, 10) || 120,
+      product_limit: Number.parseInt(document.getElementById('kiProductLimit')?.value, 10) || 50,
       system_instruction: document.getElementById('kiSystemInstruction')?.value || ''
     };
 
@@ -245,7 +249,7 @@
     }
   };
 
-  window._kiSaveSettings = async function() {
+  globalThis._kiSaveSettings = async function() {
     const provider = document.querySelector('input[name="kiProvider"]:checked').value;
     const settings = {
       provider: provider,
@@ -254,8 +258,8 @@
       api_url: document.getElementById('kiApiUrl')?.value || '',
       api_key: document.getElementById('kiApiKey')?.value || '',
       api_model: document.getElementById('kiApiModel')?.value || 'gpt-4o-mini',
-      timeout: parseInt(document.getElementById('kiTimeout')?.value) || 120,
-      product_limit: parseInt(document.getElementById('kiProductLimit')?.value) || 50,
+      timeout: Number.parseInt(document.getElementById('kiTimeout')?.value, 10) || 120,
+      product_limit: Number.parseInt(document.getElementById('kiProductLimit')?.value, 10) || 50,
       system_instruction: document.getElementById('kiSystemInstruction')?.value || '',
       enabled: true
     };
@@ -296,7 +300,7 @@
     const badge = document.getElementById('kiStatusBadge');
     if (!badge) return;
 
-    if (!_settings || !_settings.enabled) {
+    if (!_settings?.enabled) {
       badge.textContent = '⚠️ Nicht konfiguriert';
       badge.style.background = 'rgba(255,193,7,0.2)';
     } else if (_settings.provider === 'ollama') {
@@ -308,7 +312,7 @@
     }
   }
 
-  window._kiSendMessage = async function() { // NOSONAR - UI handler, intentional complexity
+  globalThis._kiSendMessage = async function() { // NOSONAR - UI handler, intentional complexity
     const input = document.getElementById('kiInput');
     const msg = input.value.trim();
     if (!msg) return;
@@ -337,14 +341,18 @@
 
     container.scrollTop = container.scrollHeight;
 
-    const timeoutMs = ((_settings && _settings.timeout) || 180) * 1000;
+    const timeoutMs = (_settings?.timeout || 180) * 1000;
     if (_activeRequestController) {
-      try { _activeRequestController.abort(); } catch (e) {}
+      try { _activeRequestController.abort(); } catch (e) {
+        console.warn('[KI] Could not abort request:', e);
+      }
     }
     const controller = new AbortController();
     _activeRequestController = controller;
     if (_activeRequestTimeoutId) {
-      try { clearTimeout(_activeRequestTimeoutId); } catch (e) {}
+      try { clearTimeout(_activeRequestTimeoutId); } catch (e) {
+        console.warn('[KI] Could not clear timeout:', e);
+      }
     }
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     _activeRequestTimeoutId = timeoutId;
@@ -367,8 +375,10 @@
         const response = data.response || '(Keine Antwort)';
 
         const isFirstMessage = _chatHistory.length === 0;
-        _chatHistory.push({ role: 'user', content: msg });
-        _chatHistory.push({ role: 'assistant', content: response });
+        _chatHistory.push(
+          { role: 'user', content: msg },
+          { role: 'assistant', content: response }
+        );
         
         if (isFirstMessage) {
           _kiSaveSession(msg);
@@ -409,7 +419,7 @@
     container.scrollTop = container.scrollHeight;
   };
 
-  window._kiRequestClose = function() {
+  globalThis._kiRequestClose = function() {
     const modal = document.getElementById('kiChatModal');
     if (!modal) return;
 
@@ -440,12 +450,12 @@
     modal.remove();
   };
 
-  window._kiCloseContinue = function() {
+  globalThis._kiCloseContinue = function() {
     document.getElementById('kiCloseConfirm')?.remove();
     document.getElementById('kiChatModal')?.remove();
   };
 
-  window._kiCloseStop = function() {
+  globalThis._kiCloseStop = function() {
     try {
       if (_activeRequestTimeoutId) {
         clearTimeout(_activeRequestTimeoutId);
@@ -454,7 +464,9 @@
       if (_activeRequestController) {
         _activeRequestController.abort();
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn('[KI] Could not stop request:', e);
+    }
     _activeRequestController = null;
     const loading = _activeLoadingId ? document.getElementById(_activeLoadingId) : null;
     if (loading) loading.remove();
@@ -465,10 +477,10 @@
 
   function _kiEsc(str) {
     return String(str || '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;');
   }
 
   function _kiLoadSessions() {
@@ -499,10 +511,12 @@
     
     try {
       localStorage.setItem('ki_chat_sessions', JSON.stringify(_chatSessions));
-    } catch(e) {}
+    } catch(e) {
+      console.warn('[KI] Could not save sessions:', e);
+    }
   }
 
-  window._kiToggleHistory = function() {
+  globalThis._kiToggleHistory = function() {
     const dropdown = document.getElementById('kiHistoryDropdown');
     if (!dropdown) return;
     
@@ -532,7 +546,7 @@
     ).join('') + '<div onclick="_kiNewChat()" style="padding:10px 12px;cursor:pointer;font-size:0.85em;color:#4a90e2;text-align:center">+ Neuer Chat</div>';
   };
 
-  window._kiRenameSession = function(index) {
+  globalThis._kiRenameSession = function(index) {
     const session = _chatSessions[index];
     if (!session) return;
     const newTitle = prompt('Neuer Name für den Chat:', session.title || '');
@@ -540,12 +554,14 @@
     session.title = String(newTitle).trim() || session.title;
     try {
       localStorage.setItem('ki_chat_sessions', JSON.stringify(_chatSessions));
-    } catch (e) {}
+    } catch (e) {
+      console.warn('[KI] Could not save sessions:', e);
+    }
     _kiToggleHistory();
     _kiToggleHistory();
   };
 
-  window._kiDeleteSession = function(index) {
+  globalThis._kiDeleteSession = function(index) {
     const session = _chatSessions[index];
     if (!session) return;
     const ok = confirm('Chat wirklich löschen?');
@@ -553,12 +569,14 @@
     _chatSessions.splice(index, 1);
     try {
       localStorage.setItem('ki_chat_sessions', JSON.stringify(_chatSessions));
-    } catch (e) {}
+    } catch (e) {
+      console.warn('[KI] Could not save sessions:', e);
+    }
     _kiToggleHistory();
     _kiToggleHistory();
   };
 
-  window._kiLoadSession = function(index) {
+  globalThis._kiLoadSession = function(index) {
     const session = _chatSessions[index];
     if (!session) return;
     
@@ -580,7 +598,7 @@
     container.scrollTop = container.scrollHeight;
   };
 
-  window._kiNewChat = function() {
+  globalThis._kiNewChat = function() {
     _chatHistory = [];
     const container = document.getElementById('kiChatMessages');
     if (container) {
