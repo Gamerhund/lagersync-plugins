@@ -141,7 +141,8 @@ def _call_ollama(settings, messages):
 
     timeout = settings.get("timeout", 120)
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310 # validated by _is_safe_url
+        
+        with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310
             data = json_module.loads(resp.read().decode('utf-8'))
             return data.get("message", {}).get("content", ""), None
     except urllib.error.HTTPError as e:
