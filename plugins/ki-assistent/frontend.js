@@ -334,6 +334,44 @@
     }
   }
 
+  function _kiRenderError(container, errorMsg) {
+    container.innerHTML += `
+      <div style="display:flex;justify-content:flex-start">
+        <div style="background:rgba(255,107,107,0.15);padding:10px 16px;border-radius:16px 16px 16px 4px;max-width:80%">❌ ${_kiEsc(errorMsg)}</div>
+      </div>
+    `;
+  }
+
+  function _kiSetupAbortController(timeoutMs) {
+    if (_activeRequestController) {
+      try { _activeRequestController.abort(); } catch (e) {
+        console.warn('[KI] Could not abort request:', e);
+      }
+    }
+    const controller = new AbortController();
+    _activeRequestController = controller;
+    if (_activeRequestTimeoutId) {
+      try { clearTimeout(_activeRequestTimeoutId); } catch (e) {
+        console.warn('[KI] Could not clear timeout:', e);
+      }
+    }
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    _activeRequestTimeoutId = timeoutId;
+    return { controller, timeoutId };
+  }
+
+  function _kiHandleApiResponse(container, data, msg) {
+    if (data.status !== 'ok') {
+      _kiRenderError(container, data.message || 'Unbekannter Fehler');
+      return;
+    }
+    const response = data.response || '(Keine Antwort)';
+    const isFirstMessage = _chatHistory.length === 0;
+    _chatHistory.push({ role: 'user', content: msg }, { role: 'assistant', content: response });
+    if (isFirstMessage) { _kiSaveSession(msg); }
+    container.innerHTML += _renderChatBubble(response, false);
+  }
+
   globalThis._kiSendMessage = async function() {
     const input = document.getElementById('kiInput');
     const msg = input.value.trim();
@@ -356,24 +394,10 @@
         </div>
       </div>
     `;
-
     container.scrollTop = container.scrollHeight;
 
     const timeoutMs = (_settings?.timeout || 180) * 1000;
-    if (_activeRequestController) {
-      try { _activeRequestController.abort(); } catch (e) {
-        console.warn('[KI] Could not abort request:', e);
-      }
-    }
-    const controller = new AbortController();
-    _activeRequestController = controller;
-    if (_activeRequestTimeoutId) {
-      try { clearTimeout(_activeRequestTimeoutId); } catch (e) {
-        console.warn('[KI] Could not clear timeout:', e);
-      }
-    }
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    _activeRequestTimeoutId = timeoutId;
+    const { controller, timeoutId } = _kiSetupAbortController(timeoutMs);
 
     try {
       const resp = await PluginAPI.fetch(pluginId, '/chat', {
@@ -385,51 +409,22 @@
       clearTimeout(timeoutId);
       _activeRequestTimeoutId = null;
       const data = await resp.json();
-
       const loading = document.getElementById(loadingId);
       if (loading) loading.remove();
-
-      if (data.status === 'ok') {
-        const response = data.response || '(Keine Antwort)';
-
-        const isFirstMessage = _chatHistory.length === 0;
-        _chatHistory.push(
-          { role: 'user', content: msg },
-          { role: 'assistant', content: response }
-        );
-        
-        if (isFirstMessage) {
-          _kiSaveSession(msg);
-        }
-
-        container.innerHTML += _renderChatBubble(response, false);
-      } else {
-        container.innerHTML += `
-          <div style="display:flex;justify-content:flex-start">
-            <div style="background:rgba(255,107,107,0.15);padding:10px 16px;border-radius:16px 16px 16px 4px;max-width:80%">❌ ${_kiEsc(data.message || 'Unbekannter Fehler')}</div>
-          </div>
-        `;
-      }
+      _kiHandleApiResponse(container, data, msg);
     } catch (e) {
       clearTimeout(timeoutId);
       _activeRequestTimeoutId = null;
       const loading = document.getElementById(loadingId);
       if (loading) loading.remove();
-
-      let errorMsg = e.message;
-      if (e.name === 'AbortError') {
-        errorMsg = `Timeout nach ${timeoutMs/1000}s - KI braucht länger. Erhöhe Timeout in Einstellungen.`;
-      }
-      container.innerHTML += `
-        <div style="display:flex;justify-content:flex-start">
-          <div style="background:rgba(255,107,107,0.15);padding:10px 16px;border-radius:16px 16px 16px 4px;max-width:80%">❌ ${_kiEsc(errorMsg)}</div>
-        </div>
-      `;
+      const errorMsg = e.name === 'AbortError'
+        ? `Timeout nach ${timeoutMs / 1000}s - KI braucht länger. Erhöhe Timeout in Einstellungen.`
+        : e.message;
+      _kiRenderError(container, errorMsg);
     }
 
     _activeRequestController = null;
     _activeLoadingId = null;
-
     container.scrollTop = container.scrollHeight;
   };
 

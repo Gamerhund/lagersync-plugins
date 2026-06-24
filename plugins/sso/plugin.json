@@ -3,7 +3,7 @@
   "version": "1.2.0",
   "author": "Gamerhund",
   "description": "Single Sign-On per OpenID Connect mit konfigurierbarem Username-Claim, Nonce, Logout, Scope und verbesserter Sicherheit. Funktioniert mit jedem OIDC-Provider.",
-  "verified": false,
+  "verified": true,
   "enabled": false,
   "permissions": ["users.read", "users.write", "db.read", "db.write", "system.network"]
 }

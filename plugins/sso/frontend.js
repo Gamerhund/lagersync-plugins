@@ -1,34 +1,44 @@
-(async function() {
-    if (document.readyState === 'loading') {
-        await new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve));
-    }
+(function() {
+    'use strict';
 
-    const pluginId = window.pluginId || 
-                     document.currentScript?.src?.match(/plugin\/([^/]+)/)?.[1] || 
+    // Capture currentScript.src synchronously — it becomes null after any await
+    const _scriptSrc = document.currentScript?.src;
+
+    const pluginId = globalThis.pluginId ||
+                     _scriptSrc?.match(/plugin\/([^/]+)/)?.[1] ||
                      'sso';
 
-    try {
-        const resp = await PluginAPI.fetch(pluginId, '/public-config');
-        const cfg = await resp.json();
+    async function _ssoInitLoginButton() {
+        try {
+            const resp = await PluginAPI.fetch(pluginId, '/public-config');
+            const cfg = await resp.json();
 
-        if (cfg.configured) {
-            const target = document.querySelector('#pinScreen') ||
-                          document.querySelector('.login-screen') ||
-                          document.querySelector('.pin-screen') ||
-                          document.querySelector('.auth-screen');
+            if (cfg.configured) {
+                const target = document.querySelector('#pinScreen') ||
+                              document.querySelector('.login-screen') ||
+                              document.querySelector('.pin-screen') ||
+                              document.querySelector('.auth-screen');
 
-            if (target && !document.getElementById('sso-login-btn')) {
-                const btn = document.createElement('button');
-                btn.id = 'sso-login-btn';
-                btn.className = 'btn';
-                btn.style.cssText = 'width:100%;margin-top:16px;display:flex;align-items:center;justify-content:center;gap:8px;';
-                btn.innerHTML = '🔐 ' + (cfg.button_text || 'Mit SSO anmelden');
-                btn.onclick = () => window.location.href = `/api/plugin/${pluginId}/login`;
-                target.appendChild(btn);
+                if (target && !document.getElementById('sso-login-btn')) {
+                    const btn = document.createElement('button');
+                    btn.id = 'sso-login-btn';
+                    btn.className = 'btn';
+                    btn.style.cssText = 'width:100%;margin-top:16px;display:flex;align-items:center;justify-content:center;gap:8px;';
+                    btn.innerHTML = '🔐 ' + (cfg.button_text || 'Mit SSO anmelden');
+                    btn.onclick = () => { globalThis.location.href = `/api/plugin/${pluginId}/login`; };
+                    target.appendChild(btn);
+                }
             }
+        } catch (e) {
+            console.error('[sso] Login-Button Fehler:', e);
         }
-    } catch (e) {
-        console.error('[sso] Login-Button Fehler:', e);
+    }
+
+    // Run at the right time — no async IIFE needed
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _ssoInitLoginButton);
+    } else {
+        _ssoInitLoginButton();
     }
 
     PluginAPI.addMenuItem('SSO', '🔐', async function () {
@@ -146,9 +156,11 @@
             }
         };
 
-        document.getElementById('sso-reset').onclick = () => { 
-            if(confirm('Konfiguration wirklich zurücksetzen?')) location.reload(); 
+        document.getElementById('sso-reset').onclick = () => {
+            if (confirm('Konfiguration wirklich zurücksetzen?')) globalThis.location.reload();
         };
-        document.getElementById('sso-logout').onclick = () => window.location.href = `/api/plugin/${pluginId}/logout`;
+        document.getElementById('sso-logout').onclick = () => {
+            globalThis.location.href = `/api/plugin/${pluginId}/logout`;
+        };
     });
 })();
