@@ -414,7 +414,7 @@ PluginAPI.addMenuItem('Mein Plugin', '🔌', async function() {
 
 - Nur Buchstaben, Zahlen, Bindestrich und Unterstrich: `a-z A-Z 0-9 - _`
 - Keine Leerzeichen oder Sonderzeichen
-- Lowercase empfohlen: `ki-assistent`, `low_stock_notifications`, `mein-plugin`
+- Lowercase empfohlen: `ki-assistent`, `low_stock_notifications`, `mein-plugin`, ´sso`
 
 ---
 
