@@ -19,6 +19,7 @@ MAINTAINER_VERIFIED_PLUGINS = frozenset([
     "ki-assistent",
     "low_stock_notifications",
     "pro-design",
+    "sso",
 ])
 
 @pytest.fixture

@@ -109,20 +109,20 @@ def _is_entry_disabled(entry, pid):
     return False
 
 
+def _dict_has_disabled_pid(pid: str, d: dict) -> bool:
+    """Check if pid is disabled in a dict settings object."""
+    if pid in d and _is_entry_disabled(d[pid], pid):
+        return True
+    return any(_is_entry_disabled(v, pid) for v in d.values())
+
+
 def _check_pid_disabled_in_settings_obj(pid: str, obj) -> bool:
     """Check if plugin is explicitly disabled in a parsed settings object. Returns True if disabled."""
     try:
         if isinstance(obj, dict):
-            if pid in obj:
-                if _is_entry_disabled(obj.get(pid), pid):
-                    return True
-            for vv in obj.values():
-                if _is_entry_disabled(vv, pid):
-                    return True
-        elif isinstance(obj, list):
-            for it in obj:
-                if _is_entry_disabled(it, pid):
-                    return True
+            return _dict_has_disabled_pid(pid, obj)
+        if isinstance(obj, list):
+            return any(_is_entry_disabled(it, pid) for it in obj)
     except Exception:
         pass
     return False
@@ -266,7 +266,7 @@ def _send_telegram(settings, message):
     payload = {"chat_id": chat_id, "text": message, "parse_mode": "HTML"}
 
     try:
-        req = urllib.request.Request(
+        req = urllib.request.Request(  # NOSONAR - URL validated by _is_safe_url above
             url,
             data=json_module.dumps(payload).encode(_ENC_UTF8),
             headers={"Content-Type": _CONTENT_TYPE_JSON}
@@ -301,8 +301,8 @@ def _send_discord(settings, message):
     payload = {"content": message}
 
     try:
-        req = urllib.request.Request(
-            webhook_url,  # NOSONAR - validated by _is_safe_url
+        req = urllib.request.Request(  # NOSONAR - URL validated by _is_safe_url above
+            webhook_url,
             data=json_module.dumps(payload).encode(_ENC_UTF8),
             headers={"Content-Type": _CONTENT_TYPE_JSON}
         )
@@ -326,8 +326,8 @@ def _send_webhook(settings, data):
         return False, "Webhook URL muss HTTPS verwenden"
 
     try:
-        req = urllib.request.Request(
-            url,  # NOSONAR - validated by _is_safe_url
+        req = urllib.request.Request(  # NOSONAR - URL validated by _is_safe_url above
+            url,
             data=json_module.dumps(data).encode(_ENC_UTF8),
             headers={"Content-Type": _CONTENT_TYPE_JSON}
         )
@@ -437,103 +437,135 @@ def _get_low_stock_items():
     return low_stock if low_stock else []
 
 
-def _check_new_logins(settings, username_filter, allowed_ip_labels):
-    login_msgs = []
-    if not settings.get("notify_login", True):
-        return login_msgs
-    
+def _fetch_session_rows(username_filter):
+    """Fetch session rows from DB, filtered by username if given."""
+    conn = get_db_connection()
+    c = conn.cursor()
     try:
-        conn_s = get_db_connection()
-        c_s = conn_s.cursor()
-        try:
-            if username_filter:
-                c_s.execute("SELECT sid, username, created, ip, ua FROM sessions WHERE lower(username)=lower(?) ORDER BY created ASC", (username_filter,))
-            else:
-                c_s.execute("SELECT sid, username, created, ip, ua FROM sessions ORDER BY created ASC")
-            srows = c_s.fetchall() or []
-        finally:
-            conn_s.close()
+        if username_filter:
+            c.execute(
+                "SELECT sid, username, created, ip, ua FROM sessions "
+                "WHERE lower(username)=lower(?) ORDER BY created ASC",
+                (username_filter,)
+            )
+        else:
+            c.execute("SELECT sid, username, created, ip, ua FROM sessions ORDER BY created ASC")
+        return c.fetchall() or []
+    finally:
+        conn.close()
+
+
+def _format_login_message(uname, ip, ua, allowed_ip_labels):
+    """Build a login notification message for a single session."""
+    uname = str(uname or '').strip() or 'Unbekannt'
+    ip = str(ip or '').strip() or 'IP unbekannt'
+    ua = str(ua or '').strip()
+    label = allowed_ip_labels.get(ip, '')
+    extra = f" · {ua}" if ua else ""
+    if label:
+        return f"🔐 Anmeldung: {uname} · {label} ({ip}){extra}"
+    return f"🔐 Anmeldung: {uname} · {ip}{extra}"
+
+
+def _check_new_logins(settings, username_filter, allowed_ip_labels):
+    if not settings.get("notify_login", True):
+        return []
+
+    try:
+        srows = _fetch_session_rows(username_filter)
         last_sids = set(settings.get("last_sessions", []) or [])
+        login_msgs = []
         current_sids = []
+
         for r in srows:
-            sid = _pick(r, 'sid', 0)
-            uname = _pick(r, 'username', 1)
-            ip = _pick(r, 'ip', 3)
-            ua = _pick(r, 'ua', 4)
-            sid = str(sid or '').strip()
+            sid = str(_pick(r, 'sid', 0) or '').strip()
             if not sid:
                 continue
             current_sids.append(sid)
             if sid in last_sids:
                 continue
-            uname = str(uname or '').strip() or 'Unbekannt'
-            ip = str(ip or '').strip() or 'IP unbekannt'
-            ua = str(ua or '').strip()
-            label = allowed_ip_labels.get(ip, '')
-            extra = f" · {ua}" if ua else ""
-            if label:
-                login_msgs.append(f"🔐 Anmeldung: {uname} · {label} ({ip}){extra}")
-            else:
-                login_msgs.append(f"🔐 Anmeldung: {uname} · {ip}{extra}")
+            login_msgs.append(_format_login_message(
+                _pick(r, 'username', 1),
+                _pick(r, 'ip', 3),
+                _pick(r, 'ua', 4),
+                allowed_ip_labels,
+            ))
+
         settings["last_sessions"] = list(current_sids)[-500:]
+        return login_msgs
     except Exception:
-        pass
-    return login_msgs
+        return []
+
+
+def _fetch_allowed_ip_rows(username_filter):
+    """Fetch user_allowed_ips rows from DB, filtered by username if given."""
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        if username_filter:
+            c.execute(
+                "SELECT username, ip, COALESCE(label,'') as label "
+                "FROM user_allowed_ips WHERE lower(username)=lower(?)",
+                (username_filter,)
+            )
+        else:
+            c.execute("SELECT username, ip, COALESCE(label,'') as label FROM user_allowed_ips")
+        return c.fetchall() or []
+    finally:
+        conn.close()
+
+
+def _build_last_ips_set(last_raw):
+    """Normalise the last_allowed_ips list into a comparison set."""
+    last = set()
+    for x in last_raw:
+        try:
+            s = str(x or '')
+        except Exception:
+            continue
+        if '|' in s:
+            u, ipx = s.split('|', 1)
+            last.add(u.strip().lower() + '|' + ipx.strip())
+        else:
+            last.add(s.strip())
+    return last
 
 
 def _check_new_trusted_devices(settings, username_filter):
-    trusted_msgs = []
     notify_trusted = settings.get("notify_new_trusted_device", True)
     notify_trusted_manual = settings.get("notify_new_trusted_device_manual", True)
     if not (notify_trusted or notify_trusted_manual):
-        return trusted_msgs
-    
+        return []
+
     try:
-        conn2 = get_db_connection()
-        c2 = conn2.cursor()
-        try:
-            if username_filter:
-                c2.execute("SELECT username, ip, COALESCE(label,'') as label FROM user_allowed_ips WHERE lower(username)=lower(?)", (username_filter,))
-            else:
-                c2.execute("SELECT username, ip, COALESCE(label,'') as label FROM user_allowed_ips")
-            rows = c2.fetchall() or []
-        finally:
-            conn2.close()
-        last_raw = settings.get("last_allowed_ips", []) or []
-        last = set()
-        for x in last_raw:
-            try:
-                s = str(x or '')
-            except Exception:
-                continue
-            if '|' in s:
-                u, ipx = s.split('|', 1)
-                last.add(u.strip().lower() + '|' + ipx.strip())
-            else:
-                last.add(s.strip())
+        rows = _fetch_allowed_ip_rows(username_filter)
+        last = _build_last_ips_set(settings.get("last_allowed_ips", []) or [])
+        trusted_msgs = []
         current = set()
+
         for r in rows:
-            uname = _pick(r, 'username', 0)
-            ip = _pick(r, 'ip', 1)
-            label = _pick(r, 'label', 2)
-            uname = str(uname or '').strip()
-            ip = str(ip or '').strip()
-            label = str(label or '').strip()
+            uname = str(_pick(r, 'username', 0) or '').strip()
+            ip = str(_pick(r, 'ip', 1) or '').strip()
+            label = str(_pick(r, 'label', 2) or '').strip()
             if not uname or not ip:
                 continue
             key = uname.lower() + "|" + ip
             current.add(key)
             if key in last:
                 continue
-            is_manual = bool(label)
-            if is_manual and notify_trusted_manual:
-                trusted_msgs.append(f"✅ Neues vertrauenswürdiges Gerät/IP manuell hinzugefügt: {uname} · {ip} ({label})")
-            elif (not is_manual) and notify_trusted:
-                trusted_msgs.append(f"✅ Neues vertrauenswürdiges Gerät/IP automatisch freigegeben: {uname} · {ip}")
+            if label and notify_trusted_manual:
+                trusted_msgs.append(
+                    f"✅ Neues vertrauenswürdiges Gerät/IP manuell hinzugefügt: {uname} · {ip} ({label})"
+                )
+            elif not label and notify_trusted:
+                trusted_msgs.append(
+                    f"✅ Neues vertrauenswürdiges Gerät/IP automatisch freigegeben: {uname} · {ip}"
+                )
+
         settings["last_allowed_ips"] = list(current)
+        return trusted_msgs
     except Exception:
-        pass
-    return trusted_msgs
+        return []
 
 
 def _build_notification_message(new_low, trusted_msgs, login_msgs):
@@ -711,37 +743,63 @@ def manual_check():
         return json_response({"status": "error", "message": str(e)})
 
 
+def _test_telegram(tmp, data):
+    if _KEY_TG_TOKEN in data and not _is_masked_secret(data.get(_KEY_TG_TOKEN)):
+        tmp[_KEY_TG_TOKEN] = data[_KEY_TG_TOKEN]
+    if _KEY_TG_CHAT in data:
+        tmp[_KEY_TG_CHAT] = data[_KEY_TG_CHAT]
+    _, err = _send_telegram(tmp, "✅ Telegram Test erfolgreich")
+    return err
+
+
+def _test_discord(tmp, data):
+    if "discord_webhook" in data:
+        tmp["discord_webhook"] = data["discord_webhook"]
+    _, err = _send_discord(tmp, "✅ Discord Test erfolgreich")
+    return err
+
+
+def _test_webhook(tmp, data):
+    if "webhook_url" in data:
+        tmp["webhook_url"] = data["webhook_url"]
+    _, err = _send_webhook(tmp, {
+        "type": "test",
+        "message": "Webhook Test erfolgreich",
+        "ts": int(time_module.time() * 1000),
+    })
+    return err
+
+
+def _test_email(tmp, data):
+    for k in ("email_smtp", "email_port", "email_user", _KEY_EMAIL_PASS, "email_to", "email_use_tls"):
+        if k in data:
+            if k == _KEY_EMAIL_PASS and _is_masked_secret(data.get(k)):
+                continue
+            tmp[k] = data[k]
+    _, err = _send_email(tmp, "Lagerverwaltung Test", "E-Mail Test erfolgreich")
+    return err
+
+
+_NOTIFICATION_TEST_HANDLERS = {
+    "telegram": _test_telegram,
+    "discord": _test_discord,
+    "webhook": _test_webhook,
+    "email": _test_email,
+}
+
+
 @plugin_blueprint.route("/test", methods=["POST"])
 @require_auth()
 def test_notification():
     data = request.json or {}
     ntype = data.get("type", "")
+    handler = _NOTIFICATION_TEST_HANDLERS.get(ntype)
+    if not handler:
+        return json_response({"status": "error", "message": "Unbekannter Typ"})
+
     settings = _get_notify_settings()
     tmp = dict(settings)
-
-    if ntype == "telegram":
-        if _KEY_TG_TOKEN in data and not _is_masked_secret(data.get(_KEY_TG_TOKEN)):
-            tmp[_KEY_TG_TOKEN] = data.get(_KEY_TG_TOKEN)
-        if _KEY_TG_CHAT in data:
-            tmp[_KEY_TG_CHAT] = data.get(_KEY_TG_CHAT)
-        _, err = _send_telegram(tmp, "✅ Telegram Test erfolgreich")
-    elif ntype == "discord":
-        if "discord_webhook" in data:
-            tmp["discord_webhook"] = data.get("discord_webhook")
-        _, err = _send_discord(tmp, "✅ Discord Test erfolgreich")
-    elif ntype == "webhook":
-        if "webhook_url" in data:
-            tmp["webhook_url"] = data.get("webhook_url")
-        _, err = _send_webhook(tmp, {"type": "test", "message": "Webhook Test erfolgreich", "ts": int(time_module.time() * 1000)})
-    elif ntype == "email":
-        for k in ("email_smtp", "email_port", "email_user", _KEY_EMAIL_PASS, "email_to", "email_use_tls"):
-            if k in data:
-                if k == _KEY_EMAIL_PASS and _is_masked_secret(data.get(k)):
-                    continue
-                tmp[k] = data.get(k)
-        _, err = _send_email(tmp, "Lagerverwaltung Test", "E-Mail Test erfolgreich")
-    else:
-        return json_response({"status": "error", "message": "Unbekannter Typ"})
+    err = handler(tmp, data)
 
     if err:
         return json_response({"status": "error", "message": err})

@@ -16,6 +16,7 @@ except ModuleNotFoundError:
         "ki-assistent",
         "low_stock_notifications",
         "pro-design",
+        "sso",
     ])
 
 
