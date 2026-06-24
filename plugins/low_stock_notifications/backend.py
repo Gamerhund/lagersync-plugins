@@ -531,6 +531,15 @@ def _build_last_ips_set(last_raw):
     return last
 
 
+def _build_trusted_device_message(uname, ip, label, notify_trusted, notify_trusted_manual):
+    """Build notification message for a new trusted device."""
+    if label and notify_trusted_manual:
+        return f"✅ Neues vertrauenswürdiges Gerät/IP manuell hinzugefügt: {uname} · {ip} ({label})"
+    elif not label and notify_trusted:
+        return f"✅ Neues vertrauenswürdiges Gerät/IP automatisch freigegeben: {uname} · {ip}"
+    return None
+
+
 def _check_new_trusted_devices(settings, username_filter):
     notify_trusted = settings.get("notify_new_trusted_device", True)
     notify_trusted_manual = settings.get("notify_new_trusted_device_manual", True)
@@ -553,14 +562,9 @@ def _check_new_trusted_devices(settings, username_filter):
             current.add(key)
             if key in last:
                 continue
-            if label and notify_trusted_manual:
-                trusted_msgs.append(
-                    f"✅ Neues vertrauenswürdiges Gerät/IP manuell hinzugefügt: {uname} · {ip} ({label})"
-                )
-            elif not label and notify_trusted:
-                trusted_msgs.append(
-                    f"✅ Neues vertrauenswürdiges Gerät/IP automatisch freigegeben: {uname} · {ip}"
-                )
+            msg = _build_trusted_device_message(uname, ip, label, notify_trusted, notify_trusted_manual)
+            if msg:
+                trusted_msgs.append(msg)
 
         settings["last_allowed_ips"] = list(current)
         return trusted_msgs
