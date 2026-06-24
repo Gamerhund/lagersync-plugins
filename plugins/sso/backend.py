@@ -1,6 +1,7 @@
 import time
 import secrets
 from urllib.parse import urlencode
+from html import escape
 
 import requests
 from flask import Blueprint, redirect, request
@@ -178,7 +179,8 @@ def sso_login():
 
 def _validate_callback_params():
     if request.args.get('error'):
-        return None, f'Anmeldung abgebrochen: {request.args.get("error")}', 400
+        error = request.args.get('error')
+        return None, f'Anmeldung abgebrochen: {escape(error)}', 400
 
     code = request.args.get('code')
     state = request.args.get('state')
