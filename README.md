@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Gamerhund_lagersync-plugins&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Gamerhund_lagersync-plugins)
-[![Plugins](https://img.shields.io/badge/Plugins-3%20verfügbar-blue.svg)](plugins/)
+[![Plugins](https://img.shields.io/badge/Plugins-4%20verfügbar-blue.svg)](plugins/)
 
 Offizieller Plugin-Marktplatz für [LagerSync](https://lagersync.de). Erweitere deine Lagerverwaltung mit verifizierten Plugins und Community-Erweiterungen – direkt über das Dashboard installierbar. | [English Version](README_EN.md)
 
@@ -12,10 +12,10 @@ Offizieller Plugin-Marktplatz für [LagerSync](https://lagersync.de). Erweitere 
 
 | Plugin | Beschreibung | Typ |
 |--------|-------------|-----|
-| [**ki-assistent**](plugins/ki-assistent/) | KI-Chat mit Ollama & OpenAI-Integration. Kann Lagerbestände abfragen und Bestandsänderungen vornehmen. | ✅ Verifiziert |
-| [**low_stock_notifications**](plugins/low_stock_notifications/) | Benachrichtigungen per Telegram, Discord, Webhook oder E-Mail bei Unterschreitung des Mindestbestands. | ✅ Verifiziert |
+| [**ki-assistent**](plugins/ki-assistent/) | KI-Chat mit Ollama/OpenAI-Integration. Kann Lagerbestände abfragen und Bestandsänderungen vornehmen. | ✅ Verifiziert |
+| [**low_stock_notifications**](plugins/low_stock_notifications/) | Benachrichtigungen per Telegram, Discord, Webhook oder E-Mail. | ✅ Verifiziert |
 | [**pro-design**](plugins/pro-design/) | Professionelle Design-Optionen und Themes für deine Lagerverwaltung. | ✅ Verifiziert |
-| [**sso**](plugins/sso/) | Single Sign-On per OpenID Connect (Authentik, Keycloak, Entra ID, etc.) mit konfigurierbarem Username-Claim, Scope, Logout und Debug-Modus. | ✅ Verifiziert |
+| [**sso**](plugins/sso/) | Single Sign-On per OpenID Connect mit konfigurierbarem Username-Claim, Nonce, Logout, Scope und verbesserter Sicherheit. Funktioniert mit jedem OIDC-Provider. | ✅ Verifiziert |
 
 ---
 

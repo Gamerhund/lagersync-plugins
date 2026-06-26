@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Gamerhund_lagersync-plugins&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Gamerhund_lagersync-plugins)
-[![Plugins](https://img.shields.io/badge/Plugins-3%20Available-blue.svg)](plugins/)
+[![Plugins](https://img.shields.io/badge/Plugins-4%20Available-blue.svg)](plugins/)
 
 Official plugin marketplace for LagerSync. Extend your inventory management system with verified plugins and community-created extensions – installable directly from the dashboard. | [Deutsche Version](README.md)
 
@@ -12,10 +12,10 @@ Official plugin marketplace for LagerSync. Extend your inventory management syst
 
 | Plugin | Description | Type |
 |----------|-------------|------|
-| [**ki-assistent**](plugins/ki-assistent/) | AI assistant with Ollama and OpenAI integration. Can query inventory levels and perform stock changes. | ✅ Verified |
-| [**low_stock_notifications**](plugins/low_stock_notifications/) | Receive notifications via Telegram, Discord, Webhook, or Email when stock levels fall below the configured minimum quantity. | ✅ Verified |
-| [**pro-design**](plugins/pro-design/) | Professional themes and advanced design customization options for your inventory management system. | ✅ Verified |
-| [**sso**](plugins/sso/) | Single sign-on via OpenID Connect (authentication, keycloak, Entra ID, etc.) with configurable username claim, scope, logout and debug mode. | ✅ Verified |
+| [**ki-assistent**](plugins/ki-assistent/) | KI-Chat mit Ollama/OpenAI-Integration. Kann Lagerbestände abfragen und Bestandsänderungen vornehmen. | ✅ Verified |
+| [**low_stock_notifications**](plugins/low_stock_notifications/) | Benachrichtigungen per Telegram, Discord, Webhook oder E-Mail. | ✅ Verified |
+| [**pro-design**](plugins/pro-design/) | Professionelle Design-Optionen und Themes für deine Lagerverwaltung. | ✅ Verified |
+| [**sso**](plugins/sso/) | Single Sign-On per OpenID Connect mit konfigurierbarem Username-Claim, Nonce, Logout, Scope und verbesserter Sicherheit. Funktioniert mit jedem OIDC-Provider. | ✅ Verified |
 
 ---
 
