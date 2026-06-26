@@ -98,11 +98,10 @@ def update_readme(readme_path: Path, plugins: Dict[str, dict], lang: str = "de")
     new_badge = generate_badge(count, lang)
     new_table = generate_plugin_table(plugins, lang)
     
-    # Update badge (line 5 in both files)
+    # Update badge (find by pattern, not fixed line number)
     lines = content.split("\n")
     for i, line in enumerate(lines):
-        is_shields_badge = False
-        if i == 4 and "Plugins" in line:
+        if "Plugins" in line and "img.shields.io" in line:
             # Extract badge image URL from markdown pattern [![...](URL)](...)
             image_url = None
             if "](" in line:
@@ -110,14 +109,11 @@ def update_readme(readme_path: Path, plugins: Dict[str, dict], lang: str = "de")
                 url_end = line.find(")", url_start)
                 if url_end != -1:
                     image_url = line[url_start:url_end]
-
             if image_url:
                 parsed = urlparse(image_url)
-                is_shields_badge = parsed.hostname == "img.shields.io"
-
-        if is_shields_badge:
-            lines[i] = new_badge
-            break
+                if parsed.hostname == "img.shields.io":
+                    lines[i] = new_badge
+                    break
     
     # Update plugin table (between "## 📦 Verfügbare Plugins" and "---")
     # or "## 📦 Available Plugins" for English
@@ -138,9 +134,9 @@ def update_readme(readme_path: Path, plugins: Dict[str, dict], lang: str = "de")
         elif in_table_section and line.strip() == "---":
             new_lines.append(line)
             in_table_section = False
-        elif not in_table_section or not table_section_added:
-            if not in_table_section:
-                new_lines.append(line)
+        elif not in_table_section:
+            new_lines.append(line)
+        # Skip all lines while in_table_section is True (old table content)
     
     new_content = "\n".join(new_lines)
     
