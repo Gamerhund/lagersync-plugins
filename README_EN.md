@@ -12,10 +12,10 @@ Official plugin marketplace for LagerSync. Extend your inventory management syst
 
 | Plugin | Description | Type |
 |----------|-------------|------|
-| [**ki-assistent**](plugins/ki-assistent/) | AI assistant with Ollama and OpenAI integration. Can query inventory levels and perform stock changes. | ✅ Verified |
-| [**low_stock_notifications**](plugins/low_stock_notifications/) | Receive notifications via Telegram, Discord, Webhook, or Email when stock levels fall below the configured minimum quantity. | ✅ Verified |
-| [**pro-design**](plugins/pro-design/) | Professional themes and advanced design customization options for your inventory management system. | ✅ Verified |
-| [**sso**](plugins/sso/) | Single sign-on via OpenID Connect (authentication, keycloak, Entra ID, etc.) with configurable username claim, scope, logout and debug mode. | ✅ Verified |
+| [**ki-assistent**](plugins/ki-assistent/) | KI-Chat mit Ollama/OpenAI-Integration. Kann Lagerbestände abfragen und Bestandsänderungen vornehmen. | ✅ Verified |
+| [**low_stock_notifications**](plugins/low_stock_notifications/) | Benachrichtigungen per Telegram, Discord, Webhook oder E-Mail. | ✅ Verified |
+| [**pro-design**](plugins/pro-design/) | Professionelle Design-Optionen und Themes für deine Lagerverwaltung. | ✅ Verified |
+| [**sso**](plugins/sso/) | Single Sign-On per OpenID Connect mit konfigurierbarem Username-Claim, Nonce, Logout, Scope und verbesserter Sicherheit. Funktioniert mit jedem OIDC-Provider. | ✅ Verified |
 
 ---
 
