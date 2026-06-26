@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Gamerhund_lagersync-plugins&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Gamerhund_lagersync-plugins)
-[![Plugins](https://img.shields.io/badge/Plugins-3%20Available-blue.svg)](plugins/)
+[![Plugins](https://img.shields.io/badge/Plugins-4%20Available-blue.svg)](plugins/)
 
 Official plugin marketplace for LagerSync. Extend your inventory management system with verified plugins and community-created extensions – installable directly from the dashboard. | [Deutsche Version](README.md)
 
