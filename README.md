@@ -47,9 +47,9 @@ plugins/
 | Dokumentation | Für wen |
 |---|---|
 | [PLUGINS.md](PLUGINS.md) | Entwickler – vollständige, menschenlesbare Dokumentation |
-| [PLUGINS_KI.md](PLUGINS_KI.md) | Vibe Coding – speziell für KI-Agenten aufbereitet |
+| [PLUGINS_KI.md](PLUGINS_KI.md) | KI-gestützte Entwicklung – speziell für KI-Agenten aufbereitet |
 
-**Tipp für Vibe Coding:** Gib [PLUGINS_KI.md](PLUGINS_KI.md) einer KI (z.B. Claude oder ChatGPT) und beschreibe was dein Plugin tun soll – sie generiert direkt PR-fertigen Code der alle automatischen Tests besteht.
+**Tipp für KI-gestützte Entwicklung:** Gib [PLUGINS_KI.md](PLUGINS_KI.md) einer KI (z.B. Claude oder ChatGPT) und beschreibe was dein Plugin tun soll – sie generiert direkt PR-fertigen Code der alle automatischen Tests besteht.
 
 ---
 

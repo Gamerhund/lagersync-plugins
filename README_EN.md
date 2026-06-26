@@ -49,7 +49,7 @@ plugins/
 | Documentation | Audience |
 |---------------|----------|
 | [PLUGINS.md](PLUGINS.md) | Developers – complete human-readable documentation |
-| [PLUGINS_KI.md](PLUGINS_KI.md) | AI-assisted development ("Vibe Coding") – optimized for AI agents |
+| [PLUGINS_KI.md](PLUGINS_KI.md) | AI-assisted development – optimized for AI agents |
 
 ### Tip for AI-Assisted Development
 
