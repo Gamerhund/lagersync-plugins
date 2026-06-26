@@ -8,6 +8,7 @@ Automatically updates README.md and README_EN.md based on plugin.json files.
 import json
 from pathlib import Path
 from typing import Dict, List, Tuple
+from urllib.parse import urlparse
 
 # Root directory
 ROOT_DIR = Path(__file__).parent.parent.parent
@@ -100,7 +101,21 @@ def update_readme(readme_path: Path, plugins: Dict[str, dict], lang: str = "de")
     # Update badge (line 5 in both files)
     lines = content.split("\n")
     for i, line in enumerate(lines):
-        if i == 4 and "Plugins" in line and "img.shields.io" in line:
+        is_shields_badge = False
+        if i == 4 and "Plugins" in line:
+            # Extract badge image URL from markdown pattern [![...](URL)](...)
+            image_url = None
+            if "](" in line:
+                url_start = line.find("](") + 2
+                url_end = line.find(")", url_start)
+                if url_end != -1:
+                    image_url = line[url_start:url_end]
+
+            if image_url:
+                parsed = urlparse(image_url)
+                is_shields_badge = parsed.hostname == "img.shields.io"
+
+        if is_shields_badge:
             lines[i] = new_badge
             break
     
