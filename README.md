@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Gamerhund_lagersync-plugins&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Gamerhund_lagersync-plugins)
-[![Plugins](https://img.shields.io/badge/Plugins-5%20verfügbar-blue.svg)](plugins/)
+[![Plugins](https://img.shields.io/badge/Plugins-4%20verfügbar-blue.svg)](plugins/)
 
 Offizieller Plugin-Marktplatz für [LagerSync](https://lagersync.de). Erweitere deine Lagerverwaltung mit verifizierten Plugins und Community-Erweiterungen – direkt über das Dashboard installierbar. | [English Version](README_EN.md)
 
@@ -16,7 +16,6 @@ Offizieller Plugin-Marktplatz für [LagerSync](https://lagersync.de). Erweitere 
 | [**low_stock_notifications**](plugins/low_stock_notifications/) | Benachrichtigungen per Telegram, Discord, Webhook oder E-Mail. | ✅ Verifiziert |
 | [**pro-design**](plugins/pro-design/) | Professionelle Design-Optionen und Themes für deine Lagerverwaltung. | ✅ Verifiziert |
 | [**sso**](plugins/sso/) | Single Sign-On per OpenID Connect mit konfigurierbarem Username-Claim, Nonce, Logout, Scope und verbesserter Sicherheit. Funktioniert mit jedem OIDC-Provider. | ✅ Verifiziert |
-| [**test-plugin-v5**](plugins/test-plugin-v5/) | Ein einfaches Test-Plugin für Community-Contributions. Demonstriert die Plugin-Struktur ohne komplexe Funktionen. | 👤 Community |
 
 ---
 
