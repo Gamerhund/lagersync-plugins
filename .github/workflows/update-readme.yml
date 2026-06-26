@@ -44,7 +44,6 @@ jobs:
             --title "chore: aktualisiere Plugin-Liste in README" \
             --body "Automatischer PR zur Aktualisierung der Plugin-Liste in README.md und README_EN.md" \
             --base main \
-            --head "$BRANCH_NAME" \
-            --label "automated"
+            --head "$BRANCH_NAME"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
