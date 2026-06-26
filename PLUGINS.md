@@ -433,4 +433,433 @@ Plugins ohne Verified-Badge wurden automatisch getestet, aber noch nicht persön
 
 ---
 
+## ⚡ Performance-Optimierung
+
+### Datenbank-Optimierung
+
+```python
+# ❌ Schlecht: N+1 Query Problem
+@plugin_blueprint.route('/alle-produkte', methods=['GET'])
+def schlechte_abfrage():
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        c.execute('SELECT id FROM products')
+        products = c.fetchall()
+        result = []
+        for p in products:
+            c.execute('SELECT * FROM inventory WHERE product_id = ?', (p['id'],))
+            inv = c.fetchone()
+            result.append({'product': p, 'inventory': inv})
+        return json_response(result)
+    finally:
+        conn.close()
+
+# ✅ Gut: JOIN Query
+@plugin_blueprint.route('/alle-produkte', methods=['GET'])
+def gute_abfrage():
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        c.execute('''
+            SELECT p.*, i.quantity, i.location_id
+            FROM products p
+            LEFT JOIN inventory i ON p.id = i.product_id
+        ''')
+        return json_response(c.fetchall())
+    finally:
+        conn.close()
+```
+
+### Caching
+
+```python
+import time
+from functools import lru_cache
+
+# Einfaches In-Memory Caching
+_cache = {}
+_cache_ttl = {}
+
+def get_cached(key, ttl_seconds, func):
+    now = time.time()
+    if key in _cache and now - _cache_ttl.get(key, 0) < ttl_seconds:
+        return _cache[key]
+    result = func()
+    _cache[key] = result
+    _cache_ttl[key] = now
+    return result
+
+@plugin_blueprint.route('/statistik', methods=['GET'])
+def statistik():
+    def calc_statistik():
+        conn = get_db_connection()
+        c = conn.cursor()
+        try:
+            c.execute('SELECT COUNT(*) as n FROM products')
+            return c.fetchone()
+        finally:
+            conn.close()
+    
+    # Cache für 5 Minuten
+    data = get_cached('statistik', 300, calc_statistik)
+    return json_response(data)
+```
+
+### Lazy Loading
+
+```javascript
+// ❌ Schlecht: Alles auf einmal laden
+PluginAPI.addMenuItem('Mein Plugin', '🔌', function() {
+    // Lädt sofort alle Daten
+    loadAllData();
+    showModal();
+});
+
+// ✅ Gut: Lazy Loading
+PluginAPI.addMenuItem('Mein Plugin', '🔌', function() {
+    showModal(); // Erst UI zeigen
+    setTimeout(() => loadAllData(), 100); // Dann Daten laden
+});
+```
+
+### Asset-Optimierung
+
+```javascript
+// CSS/JS nur laden wenn nötig
+if (document.querySelector('.inventory-page')) {
+    // Nur auf Inventar-Seite laden
+    loadPluginAssets();
+}
+```
+
+---
+
+## 🐛 Debugging
+
+### Backend Debugging
+
+```python
+import logging
+
+# Logging konfigurieren
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger('mein_plugin')
+
+@plugin_blueprint.route('/debug-test', methods=['GET'])
+def debug_test():
+    logger.debug('Debug-Test aufgerufen')
+    logger.info('Info-Nachricht')
+    logger.warning('Warnung')
+    logger.error('Fehler')
+    
+    try:
+        # Code der fehlschlagen könnte
+        result = some_function()
+        return json_response({'result': result})
+    except Exception as e:
+        logger.exception('Fehler in debug_test')
+        return json_response({'error': str(e)}, 500)
+```
+
+### Frontend Debugging
+
+```javascript
+// Console Logging
+console.log('[Mein Plugin] Initialisiert');
+console.warn('[Mein Plugin] Warnung');
+console.error('[Mein Plugin] Fehler');
+
+// Error Boundary
+window.addEventListener('error', function(e) {
+    console.error('[Mein Plugin] Globaler Fehler:', e.error);
+});
+
+// Performance Tracking
+console.time('mein-plugin-operation');
+// ... Code ...
+console.timeEnd('mein-plugin-operation');
+```
+
+### Plugin-Logs abrufen
+
+```bash
+# Backend Logs
+tail -f /var/log/lagersync/plugin.log
+
+# Frontend Logs (Browser Console)
+# Öffne DevTools → Console
+```
+
+---
+
+## 🧪 Testing
+
+### Unit Tests für Backend
+
+```python
+# tests/test_mein_plugin.py
+import unittest
+import sqlite3
+import tempfile
+import os
+
+class TestMeinPlugin(unittest.TestCase):
+    def setUp(self):
+        # Test-Datenbank erstellen
+        self.db_fd, self.db_path = tempfile.mkstemp()
+        self.conn = sqlite3.connect(self.db_path)
+        self._init_test_db()
+    
+    def tearDown(self):
+        self.conn.close()
+        os.close(self.db_fd)
+        os.unlink(self.db_path)
+    
+    def _init_test_db(self):
+        # Test-Tabellen erstellen
+        self.conn.execute('CREATE TABLE products (id INTEGER, name TEXT)')
+        self.conn.commit()
+    
+    def test_plugin_function(self):
+        # Test-Logik hier
+        result = some_plugin_function(self.conn)
+        self.assertEqual(result, expected_value)
+
+if __name__ == '__main__':
+    unittest.main()
+```
+
+### Frontend Tests
+
+```javascript
+// Einfache Funktionstests
+function testPluginAPI() {
+    console.assert(typeof PluginAPI !== 'undefined', 'PluginAPI nicht verfügbar');
+    console.assert(typeof PluginAPI.addMenuItem === 'function', 'addMenuItem nicht verfügbar');
+    console.log('✅ PluginAPI Tests bestanden');
+}
+
+// Im Browser Console ausführen
+testPluginAPI();
+```
+
+---
+
+## 📝 Error Handling & Logging
+
+### Strukturiertes Logging
+
+```python
+import logging
+import json
+from datetime import datetime
+
+logger = logging.getLogger('mein_plugin')
+
+def log_action(action, details):
+    log_entry = {
+        'timestamp': datetime.now().isoformat(),
+        'plugin': 'mein_plugin',
+        'action': action,
+        'details': details
+    }
+    logger.info(json.dumps(log_entry))
+
+@plugin_blueprint.route('/aktion', methods=['POST'])
+def meine_aktion():
+    try:
+        log_action('aktion_start', {'user': session.get('user')})
+        # ... Logik ...
+        log_action('aktion_success', {})
+        return json_response({'status': 'ok'})
+    except Exception as e:
+        log_action('aktion_error', {'error': str(e)})
+        return json_response({'error': 'Interner Fehler'}, 500)
+```
+
+### User-Friendly Error Messages
+
+```python
+@plugin_blueprint.route('/daten', methods=['GET'])
+def get_daten():
+    try:
+        # ... Logik ...
+        return json_response(data)
+    except ValueError as e:
+        return json_response({'error': 'Ungültige Eingabe', 'details': str(e)}, 400)
+    except PermissionError:
+        return json_response({'error': 'Keine Berechtigung'}, 403)
+    except Exception as e:
+        # Im Prod-Mode keine Details loggen
+        logger.exception('Unerwarteter Fehler')
+        return json_response({'error': 'Interner Fehler'}, 500)
+```
+
+---
+
+## 🏢 Multi-Tenant Best Practices
+
+### Tenant-spezifische Daten
+
+```python
+@plugin_blueprint.route('/meine-daten', methods=['GET'])
+@require_auth()
+def get_tenant_daten():
+    # Tenant-ID aus Session holen
+    tenant_id = session.get('tenant_id')
+    if not tenant_id:
+        return json_response({'error': 'Kein Tenant'}, 401)
+    
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        # Tenant-spezifische Daten abfragen
+        c.execute('''
+            SELECT * FROM mein_plugin_daten
+            WHERE tenant_id = ?
+        ''', (tenant_id,))
+        return json_response(c.fetchall())
+    finally:
+        conn.close()
+```
+
+### Tenant-Isolation sicherstellen
+
+```python
+# ❌ Schlecht: Cross-Tenant Zugriff möglich
+@plugin_blueprint.route('/alle-daten', methods=['GET'])
+def get_all_daten():
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute('SELECT * FROM mein_plugin_daten')  # Ohne tenant_id Filter!
+    return json_response(c.fetchall())
+
+# ✅ Gut: Tenant-Isolation
+@plugin_blueprint.route('/meine-daten', methods=['GET'])
+@require_auth()
+def get_my_daten():
+    tenant_id = session.get('tenant_id')
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        c.execute('''
+            SELECT * FROM mein_plugin_daten
+            WHERE tenant_id = ?
+        ''', (tenant_id,))
+        return json_response(c.fetchall())
+    finally:
+        conn.close()
+```
+
+---
+
+## 📦 Versionierung & Migration
+
+### SemVer verwenden
+
+```json
+{
+  "version": "1.2.3"
+}
+```
+
+- **MAJOR** (1.x.x): Breaking Changes
+- **MINOR** (x.1.x): Neue Features, rückwärtskompatibel
+- **PATCH** (x.x.1): Bugfixes, rückwärtskompatibel
+
+### Datenbank-Migration
+
+```python
+def migrate_db(from_version, to_version):
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        if from_version < '1.1.0':
+            # Migration zu 1.1.0
+            c.execute('ALTER TABLE mein_plugin_daten ADD COLUMN new_field TEXT')
+        
+        if from_version < '1.2.0':
+            # Migration zu 1.2.0
+            c.execute('CREATE INDEX idx_tenant ON mein_plugin_daten(tenant_id)')
+        
+        conn.commit()
+    finally:
+        conn.close()
+
+# Beim Plugin-Start aufrufen
+current_version = get_setting_value('mein_plugin_version') or '1.0.0'
+if current_version < '1.2.0':
+    migrate_db(current_version, '1.2.0')
+    set_setting_value('mein_plugin_version', '1.2.0')
+```
+
+---
+
+## 🔧 Troubleshooting
+
+### Häufige Probleme
+
+**Plugin wird nicht geladen:**
+- Prüfe ob `plugin.json` gültiges JSON ist
+- Prüfe ob `plugin_blueprint` in `backend.py` existiert
+- Prüfe ob `verified: false` gesetzt ist
+
+**Backend-Routen nicht erreichbar:**
+- URL-Präfix ist `/api/plugin/{plugin-ordner-name}/`
+- Prüfe ob Route mit `@plugin_blueprint.route()` dekoriert ist
+
+**Frontend nicht geladen:**
+- Prüfe ob `frontend.js` nicht leer ist
+- Prüfe Browser Console auf JavaScript-Fehler
+
+**Datenbank-Fehler:**
+- Prüfe ob DB-Verbindung in `try/finally` geschlossen wird
+- Prüfe ob Permissions korrekt gesetzt sind
+
+### Performance-Probleme
+
+**Plugin langsam:**
+- Prüfe auf N+1 Query Probleme
+- Verwende Caching für häufige Abfragen
+- Lazy Loading für große Datenmengen
+
+**Frontend langsam:**
+- Prüfe auf unnötige DOM-Operationen
+- Verwende Event-Debouncing
+- Lazy Loading für Assets
+
+---
+
+## 🔄 Development Workflow
+
+### Lokale Entwicklung
+
+1. Plugin-Ordner in `plugins/` erstellen
+2. `plugin.json`, `backend.py`, `frontend.js` erstellen
+3. Server starten: `python lager-server.py`
+4. Plugin im Dashboard testen
+5. Logs überwachen
+
+### Testing
+
+```bash
+# Unit Tests laufen lassen
+python -m pytest tests/
+
+# Plugin-Tests laufen lassen
+python tests/test_plugin_structure.py dein-plugin
+```
+
+### Deployment
+
+1. Alle Tests bestanden?
+2. `verified: false` in `plugin.json`?
+3. Pull Request erstellen
+4. CI/CD Tests warten
+5. Review durch Maintainer
+6. Merge → Plugin im Marketplace
+
+---
+
 *Lizenz: MIT © 2026 Jonas (Gamerhund)*

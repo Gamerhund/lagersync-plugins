@@ -1,4 +1,4 @@
-# 🤖 LagerSync Plugin-Entwicklung – KI-Version (Vibe Coding)
+# 🤖 LagerSync Plugin-Entwicklung – KI-gestützte Entwicklung
 
 > **Liebe KI,** diese Datei ist speziell für dich aufbereitet.
 > Lies sie vollständig bevor du anfängst Code zu schreiben.
@@ -233,6 +233,138 @@ Beispiel: Ordner `rechnungs-export`, Route `/erstellen` → `/api/plugin/rechnun
 - Keine gefährlichen Muster (os.system, subprocess, eval, exec, socket, pickle)
 - Ordnername: lowercase, kein Leerzeichen, nur `a-z 0-9 - _`
 - Alle Pflichtfelder in plugin.json vorhanden
+
+---
+
+## ⚡ Performance-Optimierung – KI-Regeln
+
+**Datenbank-Abfragen:**
+- ✅ IMMER JOIN statt N+1 Queries verwenden
+- ✅ LIMIT bei SELECT Abfragen
+- ✅ Indexes auf häufig abgefragte Spalten
+- ❌ KEINE Schleifen mit DB-Abfragen darin
+
+**Caching:**
+- ✅ Cache für teure Operationen (>100ms)
+- ✅ TTL für Cache (5-300 Sekunden)
+- ✅ Cache-Invalidation bei Datenänderung
+
+**Frontend:**
+- ✅ Lazy Loading für große Datenmengen
+- ✅ Event-Debouncing (300ms)
+- ✅ Assets nur bei Bedarf laden
+
+---
+
+## 🐛 Debugging – KI-Regeln
+
+**Backend:**
+```python
+import logging
+logger = logging.getLogger('plugin_name')
+
+# IMMER Logging verwenden
+logger.debug('Debug info')
+logger.info('Info')
+logger.warning('Warning')
+logger.error('Error')
+logger.exception('Exception with traceback')
+```
+
+**Frontend:**
+```javascript
+// IMMER Plugin-Prefix in Logs
+console.log('[plugin-name] Info');
+console.warn('[plugin-name] Warning');
+console.error('[plugin-name] Error');
+```
+
+---
+
+## 🧪 Testing – KI-Regeln
+
+**Backend Tests:**
+```python
+# IMMER try/finally für DB in Tests
+def setUp(self):
+    self.conn = get_db_connection()
+    
+def tearDown(self):
+    self.conn.close()
+```
+
+**Frontend Tests:**
+```javascript
+// IMMER Guards für globale Funktionen
+showToast && showToast('Test');
+```
+
+---
+
+## 🏢 Multi-Tenant – KI-Regeln
+
+**CRITICAL:**
+- ✅ IMMER `tenant_id` aus Session holen
+- ✅ IMMER tenant_id in WHERE-Clause
+- ❌ NIE Daten ohne tenant_id-Filter abfragen
+- ❌ NIE Cross-Tenant Zugriff ermöglichen
+
+```python
+@require_auth()
+def get_data():
+    tenant_id = session.get('tenant_id')
+    if not tenant_id:
+        return json_response({'error': 'No tenant'}, 401)
+    
+    # IMMER tenant_id in Query
+    c.execute('SELECT * FROM table WHERE tenant_id = ?', (tenant_id,))
+```
+
+---
+
+## 📝 Error Handling – KI-Regeln
+
+**Backend:**
+```python
+# IMMER spezifische Exceptions
+try:
+    # Code
+except ValueError as e:
+    return json_response({'error': 'Invalid input', 'details': str(e)}, 400)
+except PermissionError:
+    return json_response({'error': 'Permission denied'}, 403)
+except Exception as e:
+    logger.exception('Unexpected error')
+    return json_response({'error': 'Internal error'}, 500)
+```
+
+**Frontend:**
+```javascript
+// IMMER try/catch für async
+try {
+    const resp = await PluginAPI.fetch(pluginId, '/route');
+    const data = await resp.json();
+} catch(e) {
+    console.error('[plugin-name] Error:', e);
+    showToast && showToast('❌ Error', 'error');
+}
+```
+
+---
+
+## 🔧 Code-Quality-Checkliste für KI
+
+**Vor dem Generieren prüfen:**
+- [ ] `"verified": false` in plugin.json
+- [ ] `plugin_blueprint` exakt benannt
+- [ ] Alle DB-Verbindungen in try/finally
+- [ ] `@require_auth()` auf sensiblen Routen
+- [ ] Permissions minimal
+- [ ] Keine gefährlichen Muster
+- [ ] Tenant-Isolation bei Multi-Tenant
+- [ ] Error Handling vorhanden
+- [ ] Logging implementiert
+- [ ] Performance-optimiert (JOIN, Cache, Lazy Load)
 
 ---
 
