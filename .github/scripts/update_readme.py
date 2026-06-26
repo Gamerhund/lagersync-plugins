@@ -101,7 +101,7 @@ def update_readme(readme_path: Path, plugins: Dict[str, dict], lang: str = "de")
     # Update badge (find by pattern, not fixed line number)
     lines = content.split("\n")
     for i, line in enumerate(lines):
-        if "Plugins" in line and "img.shields.io" in line:
+        if "Plugins" in line:
             # Extract badge image URL from markdown pattern [![...](URL)](...)
             image_url = None
             if "](" in line:
