@@ -6,9 +6,7 @@
 
 ## Ziel & Geltungsbereich
 
-Diese Datei ist für KI-Assistenten (Claude, ChatGPT, Gemini, Cursor, Copilot, ...), die Plugins für dieses Repository generieren. Sie ist eine **verdichtete Regel-Checkliste**, kein Ersatz für [PLUGINS.md](PLUGINS.md).
-
-**Bei Konflikten zwischen den beiden Dateien gilt immer [PLUGINS.md](PLUGINS.md)** – diese Datei wird daraus abgeleitet und kann hinterherhinken.
+Für KI-Assistenten (Claude, ChatGPT, Gemini, Cursor, Copilot, ...), die hier Plugins generieren sollen. Verdichtete Checkliste, kein Ersatz für [PLUGINS.md](PLUGINS.md) – wenn sich beide widersprechen, gilt PLUGINS.md, diese Datei ist davon abgeleitet und kann mal hinterherhinken.
 
 ---
 

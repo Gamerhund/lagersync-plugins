@@ -6,6 +6,7 @@ Automatically updates README.md and README_EN.md based on plugin.json files.
 """
 
 import json
+import sys
 from pathlib import Path
 from typing import Dict, List, Tuple
 from urllib.parse import urlparse
@@ -13,17 +14,14 @@ from urllib.parse import urlparse
 # Root directory
 ROOT_DIR = Path(__file__).parent.parent.parent
 PLUGIN_DIR = ROOT_DIR / "plugins"
-CONFTEST_FILE = ROOT_DIR / "tests" / "conftest.py"
 README_DE = ROOT_DIR / "README.md"
 README_EN = ROOT_DIR / "README_EN.md"
 
-# Plugins verified by maintainer (from conftest.py)
-MAINTAINER_VERIFIED_PLUGINS = frozenset([
-    "ki-assistent",
-    "low_stock_notifications",
-    "pro-design",
-    "sso",
-])
+# Einzige Quelle fuer die verified-Liste: .github/verified_plugins.py.
+# Wer hier nichts importieren, sondern lieber eine eigene Liste pflegen wuerde,
+# baut sich genau die Inkonsistenz ein, die diese Zeile verhindern soll.
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from verified_plugins import MAINTAINER_VERIFIED_PLUGINS  # noqa: E402
 
 # English descriptions for already-signed/verified plugins.
 #
