@@ -361,7 +361,6 @@
     return { controller, timeoutId };
   }
 
-  // Labels für die angezeigten Tool-Badges im Chat
   const _toolLabels = {
     search_products:            '🔍 Suche',
     get_low_stock:              '⚠️ Mindestbestand',
@@ -382,10 +381,8 @@
     if (isFirstMessage) { _kiSaveSession(msg); }
     container.innerHTML += _renderChatBubble(response, false);
 
-    // Tool-Badges anzeigen, damit sichtbar ist was die KI abgefragt hat
     const toolsUsed = Array.isArray(data.tools_used) ? data.tools_used : [];
     if (toolsUsed.length > 0) {
-      // Duplikate entfernen und Labels umwandeln
       const unique = [...new Set(toolsUsed)];
       const badges = unique.map(t => _toolLabels[t] || t).join(' · ');
       container.innerHTML += `<div style="font-size:0.72em;opacity:0.35;text-align:right;padding:2px 6px 6px">${badges}</div>`;

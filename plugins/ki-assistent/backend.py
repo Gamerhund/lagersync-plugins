@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from flask import Blueprint, request
 import urllib.request
 import urllib.error
@@ -10,11 +9,6 @@ plugin_blueprint = Blueprint("ki_assistent", __name__)
 
 OLLAMA_DEFAULT_URL = "http://localhost:11434"
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Tool-Definitionen  (OpenAI-kompatibles Format – funktioniert auch mit Ollama)
-# Hinweis: Das Modell muss Tool Calling unterstützen.
-#          Empfohlen: llama3.1, llama3.2, mistral-nemo, qwen2.5, phi3.5
-# ─────────────────────────────────────────────────────────────────────────────
 TOOLS = [
     {
         "type": "function",
@@ -131,12 +125,7 @@ TOOLS = [
 ]
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Hilfsfunktionen
-# ─────────────────────────────────────────────────────────────────────────────
-
 def _is_safe_url(url: str, allow_localhost: bool = True) -> bool:
-    """Validate URL scheme to prevent SSRF attacks."""
     try:
         parsed = urllib.parse.urlparse(url)
         scheme = (parsed.scheme or '').lower()
@@ -188,12 +177,7 @@ def _save_ki_settings(settings):
         conn.close()
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Tool-Implementierungen  (jede Funktion spricht direkt mit der Datenbank)
-# ─────────────────────────────────────────────────────────────────────────────
-
 def _tool_search_products(query: str, limit: int = 10):
-    """Sucht Produkte nach Name, Kurzname oder Barcode."""
     try:
         limit = min(max(int(limit), 1), 50)
     except (ValueError, TypeError):
@@ -204,8 +188,8 @@ def _tool_search_products(query: str, limit: int = 10):
     try:
         c.execute("""
             SELECT p.name, p.short, p.barcode, p.min_stock,
-                   COALESCE(i.quantity, 0)   AS stock,
-                   COALESCE(l.name, 'Kein Ort') AS location
+                   COALESCE(i.quantity, 0)        AS stock,
+                   COALESCE(l.name, 'Kein Ort')  AS location
             FROM products p
             LEFT JOIN inventory i ON p.id = i.product_id
             LEFT JOIN locations l ON i.location = l.name
@@ -236,15 +220,14 @@ def _tool_search_products(query: str, limit: int = 10):
 
 
 def _tool_get_low_stock():
-    """Gibt alle Produkte zurück, deren Bestand unter dem Mindestbestand liegt."""
     conn = get_db_connection()
     c = conn.cursor()
     try:
         c.execute("""
             SELECT p.name,
-                   COALESCE(i.quantity, 0)      AS stock,
+                   COALESCE(i.quantity, 0)        AS stock,
                    p.min_stock,
-                   COALESCE(l.name, 'Kein Ort') AS location
+                   COALESCE(l.name, 'Kein Ort')  AS location
             FROM products p
             LEFT JOIN inventory i ON p.id = i.product_id
             LEFT JOIN locations l ON i.location = l.name
@@ -258,7 +241,7 @@ def _tool_get_low_stock():
                 "stock": r[1],
                 "min_stock": r[2],
                 "location": r[3],
-                "missing": r[2] - r[1]
+                "missing": max(0, (r[2] or 0) - r[1])
             }
             for r in rows
         ]
@@ -268,7 +251,6 @@ def _tool_get_low_stock():
 
 
 def _tool_get_locations():
-    """Gibt alle Lagerorte zurück."""
     conn = get_db_connection()
     c = conn.cursor()
     try:
@@ -280,7 +262,6 @@ def _tool_get_locations():
 
 
 def _tool_get_inventory_by_location(location: str):
-    """Gibt das Inventar eines bestimmten Lagerorts zurück."""
     conn = get_db_connection()
     c = conn.cursor()
     try:
@@ -299,7 +280,6 @@ def _tool_get_inventory_by_location(location: str):
 
 
 def _tool_get_statistics():
-    """Gibt allgemeine Lagerstatistiken zurück."""
     conn = get_db_connection()
     c = conn.cursor()
     try:
@@ -330,7 +310,6 @@ def _tool_get_statistics():
 
 
 def _dispatch_tool(tool_name: str, arguments: dict):
-    """Führt einen Tool-Aufruf aus und gibt das Ergebnis zurück."""
     try:
         if tool_name == "search_products":
             return _tool_search_products(
@@ -356,16 +335,7 @@ def _dispatch_tool(tool_name: str, arguments: dict):
         return {"error": f"Tool-Fehler bei '{tool_name}': {str(e)}"}
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# KI-Aufrufe mit Tool-Support
-# Beide Provider (Ollama + OpenAI) geben ein einheitliches Result-Dict zurück:
-#   {"type": "text",       "content": "..."}   → KI hat geantwortet
-#   {"type": "tool_calls", "content": "...",
-#    "tool_calls": [...]}                       → KI will Tools aufrufen
-# ─────────────────────────────────────────────────────────────────────────────
-
 def _call_ollama(settings, messages):
-    """Ruft Ollama mit Tool-Support auf."""
     url = settings.get("ollama_url", OLLAMA_DEFAULT_URL) + "/api/chat"
     model = settings.get("ollama_model", "llama3.2")
 
@@ -382,13 +352,12 @@ def _call_ollama(settings, messages):
 
     timeout = settings.get("timeout", 120)
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
             data = json_module.loads(resp.read().decode('utf-8'))
             message = data.get("message", {})
             tool_calls_raw = message.get("tool_calls") or []
 
             if tool_calls_raw:
-                # Ollama-Format normalisieren: kein 'id', Argumente bereits als dict
                 tool_calls = []
                 for i, tc in enumerate(tool_calls_raw):
                     fn = tc.get("function", {})
@@ -397,7 +366,7 @@ def _call_ollama(settings, messages):
                         "type": "function",
                         "function": {
                             "name": fn.get("name", ""),
-                            "arguments": fn.get("arguments", {})  # schon dict bei Ollama
+                            "arguments": fn.get("arguments", {})
                         }
                     })
                 return {
@@ -418,7 +387,6 @@ def _call_ollama(settings, messages):
 
 
 def _call_openai(settings, messages):
-    """Ruft eine OpenAI-kompatible API mit Tool-Support auf."""
     url = settings.get("api_url", "https://api.openai.com/v1/chat/completions")
     api_key = settings.get("api_key", "")
     model = settings.get("api_model", "gpt-4o-mini")
@@ -441,7 +409,7 @@ def _call_openai(settings, messages):
 
     timeout = settings.get("timeout", 120)
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
             data = json_module.loads(resp.read().decode('utf-8'))
             choice = data.get("choices", [{}])[0]
             message = choice.get("message", {})
@@ -476,21 +444,10 @@ def _call_openai(settings, messages):
         return None, str(e)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Agentischer Chat-Loop
-# ─────────────────────────────────────────────────────────────────────────────
-
-def _agentic_chat(settings, messages):  # NOSONAR – gewollte Komplexität
-    """
-    Führt den agentic Loop aus:
-      1. Nachricht an KI schicken
-      2. KI ruft Tools auf  → ausführen → Ergebnis zurückschicken
-      3. Wiederholen, bis KI eine reine Textantwort gibt
-    Gibt zurück: (response_text, error, tools_used_list)
-    """
+def _agentic_chat(settings, messages):
     provider = settings.get("provider", "ollama")
     tools_used = []
-    MAX_ITERATIONS = 10  # Schutz gegen Endlosschleife
+    MAX_ITERATIONS = 10
 
     for _ in range(MAX_ITERATIONS):
         if provider == "ollama":
@@ -501,25 +458,20 @@ def _agentic_chat(settings, messages):  # NOSONAR – gewollte Komplexität
         if error:
             return None, error, tools_used
 
-        # KI hat eine Textantwort geliefert → fertig
         if result["type"] == "text":
             return result["content"], None, tools_used
 
-        # KI will Tools aufrufen
         if result["type"] == "tool_calls":
-            # Assistenten-Nachricht mit Tool-Calls zur History hinzufügen
             messages.append({
                 "role": "assistant",
                 "content": result.get("content") or "",
                 "tool_calls": result["tool_calls"]
             })
 
-            # Jedes Tool ausführen und Ergebnis an History anhängen
             for tc in result["tool_calls"]:
                 tool_name = tc["function"]["name"]
                 arguments = tc["function"]["arguments"]
 
-                # Argumente sicherstellen: müssen dict sein
                 if not isinstance(arguments, dict):
                     try:
                         arguments = json_module.loads(str(arguments))
@@ -538,27 +490,25 @@ def _agentic_chat(settings, messages):  # NOSONAR – gewollte Komplexität
     return None, f"Abbruch nach {MAX_ITERATIONS} Tool-Aufrufen ohne Textantwort", tools_used
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Bestandsänderung (unverändert vom Original)
-# ─────────────────────────────────────────────────────────────────────────────
-
 def _update_inventory_stock(c, prod_id, location, delta):
     timestamp = int(time.time() * 1000)
     if location:
-        c.execute("SELECT quantity FROM inventory WHERE product_id = ? AND location = ?",
-                  (prod_id, location))
+        c.execute(
+            "SELECT quantity FROM inventory WHERE product_id = ? AND location = ?",
+            (prod_id, location)
+        )
         inv_row = c.fetchone()
         old_stock = inv_row[0] if inv_row else 0
         new_stock = old_stock + delta
         if inv_row:
             c.execute(
-                "UPDATE inventory SET quantity = ?, last_changed = ? WHERE product_id = ? AND location = ?",
-                (new_stock, timestamp, prod_id, location)
+                "UPDATE inventory SET quantity = quantity + ?, last_changed = ? WHERE product_id = ? AND location = ?",
+                (delta, timestamp, prod_id, location)
             )
         else:
             c.execute(
                 "INSERT INTO inventory (location, product_id, quantity, last_changed) VALUES (?, ?, ?, ?)",
-                (location, prod_id, new_stock, timestamp)
+                (location, prod_id, delta, timestamp)
             )
     else:
         c.execute("SELECT location, quantity FROM inventory WHERE product_id = ?", (prod_id,))
@@ -567,8 +517,8 @@ def _update_inventory_stock(c, prod_id, location, delta):
             loc, old_stock = inv_rows[0]
             new_stock = old_stock + delta
             c.execute(
-                "UPDATE inventory SET quantity = ?, last_changed = ? WHERE product_id = ? AND location = ?",
-                (new_stock, timestamp, prod_id, loc)
+                "UPDATE inventory SET quantity = quantity + ?, last_changed = ? WHERE product_id = ? AND location = ?",
+                (delta, timestamp, prod_id, loc)
             )
         else:
             return None, "Kein Lagerort für Produkt gefunden. Bitte Ort angeben."
@@ -582,7 +532,14 @@ def _execute_action(action, params):
         if action == "change_stock":
             product_name = params.get("product", "")
             location = params.get("location", None)
-            delta = int(params.get("delta", 0))
+
+            try:
+                delta = int(params.get("delta", 0))
+            except (ValueError, TypeError):
+                return None, "delta muss eine ganze Zahl sein"
+
+            if not (-9999 <= delta <= 9999):
+                return None, "delta muss zwischen -9999 und 9999 liegen"
 
             c.execute(
                 "SELECT id, name FROM products WHERE name LIKE ? OR short LIKE ?",
@@ -612,10 +569,6 @@ def _execute_action(action, params):
     finally:
         conn.close()
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Routen
-# ─────────────────────────────────────────────────────────────────────────────
 
 @plugin_blueprint.route("/settings", methods=["GET"])
 @require_auth()
@@ -649,25 +602,21 @@ def save_settings():
 @require_auth()
 def test_connection():
     settings = request.json or {}
-    stored = _get_ki_settings()
-    provider = settings.get("provider", stored.get("provider", "ollama"))
-
-    # Einfacher Test ohne Tools
+    provider = settings.get("provider", "ollama")
     test_msg = [{"role": "user", "content": "Antworte nur mit dem Wort OK."}]
-    payload_no_tools = {"model": settings.get("ollama_model" if provider == "ollama" else "api_model"),
-                        "messages": test_msg, "stream": False}
 
     if provider == "ollama":
-        url = stored.get("ollama_url", OLLAMA_DEFAULT_URL) + "/api/chat"
+        url = settings.get("ollama_url", OLLAMA_DEFAULT_URL) + "/api/chat"
         if not _is_safe_url(url, allow_localhost=True):
             return json_response({"status": "error", "message": "Ungültige URL"})
+        payload = {"model": settings.get("ollama_model", "llama3.2"), "messages": test_msg, "stream": False}
         req = urllib.request.Request(
             url,
-            data=json_module.dumps(payload_no_tools).encode('utf-8'),
+            data=json_module.dumps(payload).encode('utf-8'),
             headers={"Content-Type": "application/json"}
         )
         try:
-            with urllib.request.urlopen(req, timeout=15) as resp:  # nosec B310
+            with urllib.request.urlopen(req, timeout=15) as resp:
                 data = json_module.loads(resp.read().decode('utf-8'))
                 content = data.get("message", {}).get("content", "OK")
                 return json_response({"status": "ok", "response": content[:100]})
@@ -675,19 +624,19 @@ def test_connection():
             return json_response({"status": "error", "message": str(e)})
     else:
         api_key = settings.get("api_key", "")
-        url = stored.get("api_url", "https://api.openai.com/v1/chat/completions")
+        url = settings.get("api_url", "https://api.openai.com/v1/chat/completions")
         if not api_key:
             return json_response({"status": "error", "message": "API-Key fehlt"})
         if not _is_safe_url(url, allow_localhost=False):
             return json_response({"status": "error", "message": "Ungültige URL"})
-        payload_no_tools["model"] = settings.get("api_model", "gpt-4o-mini")
+        payload = {"model": settings.get("api_model", "gpt-4o-mini"), "messages": test_msg}
         req = urllib.request.Request(
             url,
-            data=json_module.dumps(payload_no_tools).encode('utf-8'),
+            data=json_module.dumps(payload).encode('utf-8'),
             headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
         )
         try:
-            with urllib.request.urlopen(req, timeout=15) as resp:  # nosec B310
+            with urllib.request.urlopen(req, timeout=15) as resp:
                 data = json_module.loads(resp.read().decode('utf-8'))
                 content = data.get("choices", [{}])[0].get("message", {}).get("content", "OK")
                 return json_response({"status": "ok", "response": content[:100]})
@@ -705,7 +654,7 @@ def list_models():
     url = settings.get("ollama_url", OLLAMA_DEFAULT_URL) + "/api/tags"
     try:
         req = urllib.request.Request(url)
-        with urllib.request.urlopen(req, timeout=10) as resp:  # nosec B310
+        with urllib.request.urlopen(req, timeout=10) as resp:
             data = json_module.loads(resp.read().decode('utf-8'))
             models = [m.get("name", "") for m in data.get("models", [])]
             return json_response({"status": "ok", "models": models})
@@ -715,7 +664,7 @@ def list_models():
 
 @plugin_blueprint.route("/chat", methods=["POST"])
 @require_auth()
-def chat():  # NOSONAR – KI-Chat mit agentic Loop
+def chat():
     data = request.json or {}
     user_message = data.get("message", "")
     history = data.get("history", [])
@@ -745,7 +694,6 @@ def chat():  # NOSONAR – KI-Chat mit agentic Loop
 
     messages = [{"role": "system", "content": system_prompt}]
 
-    # Chat-History bereinigen und anhängen (max. letzte 20 Nachrichten)
     if isinstance(history, list):
         for item in history[-20:]:
             if not isinstance(item, dict):
