@@ -1,8 +1,8 @@
 # 📚 Examples
 
-Vier vollständige Plugin-Beispiele, vom einfachsten zum komplexesten Fall. Anders als die produktiven Plugins in `plugins/` (mehrere hundert Zeilen) sind das bewusst kleine, lesbare Referenzen zum Abschauen.
+Vier Plugins, vom einfachsten zum komplexesten Fall, bewusst klein gehalten. Die echten Plugins in `plugins/` sind allesamt mehrere hundert Zeilen produktiver Code – gut als Referenz, aber zum Reinkommen eher ungeeignet. Hier sind die Bausteine einzeln, zum Abschauen.
 
-Für die vollständige API-Referenz siehe [PLUGINS.md](PLUGINS.md), für KI-Agenten die kompakte Version [PLUGINS_KI.md](PLUGINS_KI.md).
+Für die vollständige API-Referenz: [PLUGINS.md](PLUGINS.md). Für KI-Agenten die verdichtete Version: [PLUGINS_KI.md](PLUGINS_KI.md).
 
 ---
 
@@ -23,7 +23,7 @@ plugins/mein-theme/
   "author": "DeinName",
   "description": "Ein zusätzliches Farbschema ohne eigene Logik.",
   "verified": false,
-  "enabled": true,
+  "enabled": false,
   "permissions": []
 }
 ```
@@ -50,7 +50,7 @@ plugins/lagerbestand-api/
   "author": "DeinName",
   "description": "Stellt den aktuellen Gesamtbestand als JSON-Endpunkt bereit.",
   "verified": false,
-  "enabled": true,
+  "enabled": false,
   "permissions": ["inventory.read"]
 }
 ```
@@ -100,7 +100,7 @@ plugins/schnellsuche/
   "author": "DeinName",
   "description": "Durchsucht die geladene Produkt-Datenbank per Tastenkürzel.",
   "verified": false,
-  "enabled": true,
+  "enabled": false,
   "permissions": []
 }
 ```
@@ -147,7 +147,7 @@ plugins/produktnotizen/
   "author": "DeinName",
   "description": "Notizen zu einzelnen Produkten anlegen, anzeigen und löschen.",
   "verified": false,
-  "enabled": true,
+  "enabled": false,
   "permissions": ["db.read", "db.write", "inventory.read"]
 }
 ```

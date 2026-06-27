@@ -29,7 +29,7 @@ lagersync-plugins/
   "author": "Dein Name oder GitHub-Username",
   "description": "Kurze Beschreibung was das Plugin macht.",
   "verified": false,
-  "enabled": true,
+  "enabled": false,
   "permissions": [
     "inventory.read",
     "inventory.write",
@@ -45,8 +45,15 @@ lagersync-plugins/
 | `author` | string | – | Name des Entwicklers |
 | `description` | string | – | Kurzbeschreibung |
 | `verified` | bool | – | Wird **ausschließlich vom Maintainer** gesetzt – niemals selbst auf `true` setzen. `false` = Plugin hat automatische Tests bestanden und ist verfügbar. `true` = Persönlich vom Maintainer geprüft (✅ Badge). |
-| `enabled` | bool | – | `false` = Plugin wird beim Start nicht geladen |
+| `enabled` | bool | – | Ob das Plugin nach der Installation sofort aktiv ist. Empfehlung: `false` (siehe unten, warum) |
 | `permissions` | array | – | Liste der benötigten Berechtigungen (siehe unten) |
+
+**Was nach der Installation passiert, hängt von `enabled` ab:**
+
+- **`enabled: false` (empfohlen):** Dashboard → Marketplace → Installieren. Danach in den Einstellungen unter Plugins auf "Plugins neu laden" – das Plugin taucht auf, aber noch inaktiv. Erst nach manuellem Aktivieren + nochmal "neu laden" + Seite neu laden (Strg+R) ist es wirklich da (z.B. im Menü sichtbar). Etwas mehr Klicks, aber man sieht bewusst, was man gerade aktiviert, bevor es lostippt.
+- **`enabled: true`:** Nach der Installation reicht "Plugins neu laden" einmal, dann Seite neu laden – fertig, das Plugin ist sofort aktiv.
+
+Beides ist technisch gültig, `test_plugin_structure.py` prüft nur, dass das Feld überhaupt ein Boolean ist. Für neue Einreichungen ist `false` der Default, weil so niemand versehentlich sofort mit unbekanntem Code arbeitet.
 
 ---
 
@@ -129,7 +136,7 @@ Plugins müssen **explizit** Berechtigungen anfordern. Ohne Permission werden AP
 
 ### Plugin-Signaturen, Audit-Logs, Rate Limiting & Code-Scanner
 
-Diese Mechanismen sind jetzt ausführlich in **[SECURITY.md](SECURITY.md)** beschrieben, damit diese Datei sich auf die plugin.json/API-Referenz konzentrieren kann. Kurzfassung: Verifizierte Plugins werden Ed25519-signiert, alle Aktionen werden auditiert, API-Aufrufe sind pro Permission rate-limitiert, und jedes Plugin wird beim Laden auf gefährliche Code-Muster gescannt.
+Steht jetzt ausführlich in **[SECURITY.md](SECURITY.md)**, damit diese Datei API-Referenz bleibt und nicht ausartet. Kurzfassung: verifizierte Plugins werden Ed25519-signiert, jede Aktion landet im Audit-Log, API-Calls sind pro Permission rate-limitiert, und beim Laden wird der Code auf gefährliche Muster gescannt.
 
 ---
 
@@ -309,7 +316,7 @@ Dies ist ein **Beispiel** für Entwickler – kein echtes Plugin.
   "author": "DeinName",
   "description": "Ein Beispiel-Plugin zum Testen.",
   "verified": false,
-  "enabled": true
+  "enabled": false
 }
 ```
 
@@ -369,11 +376,11 @@ Der vollständige Ablauf inkl. Branch-Namen und Review-Kriterien steht in [CONTR
 
 ## Sicherheitshinweis
 
-> 🔒 Das Plugin-System hat mehrere Schutzschichten (Permissions, Signaturen, Audit-Logs, Rate Limiting, Code-Scanner). Details und wie man eine Sicherheitslücke meldet: **[SECURITY.md](SECURITY.md)**.
+Das Plugin-System hat mehrere Schutzschichten (Permissions, Signaturen, Audit-Logs, Rate Limiting, Code-Scanner) – Details und wie man eine Lücke meldet stehen in [SECURITY.md](SECURITY.md).
 
-Plugins ohne Verified-Badge wurden automatisch getestet, aber noch nicht persönlich geprüft. Getestete und verifizierte Plugins tragen das **✅ Verifiziert** Badge (`"verified": true`, gesetzt vom Maintainer).
+Plugins ohne Verified-Badge wurden automatisch getestet, aber noch nicht persönlich geprüft. Das **✅ Verifiziert**-Badge (`"verified": true`) setzt ausschließlich der Maintainer, nach eigener Prüfung.
 
-> ⚠️ **Trotz Sicherheitsmaßnahmen:** Installiere nur Plugins deren Quellcode du gelesen und verstanden hast. Externe Plugins können potenziell schädlichen Code enthalten, der nicht vom Scanner erkannt wird.
+Trotzdem: Installier nur Plugins, deren Code du gelesen und verstanden hast. Der Scanner erkennt bekannte gefährliche Muster, nicht jede Art von schädlichem Code.
 
 ---
 

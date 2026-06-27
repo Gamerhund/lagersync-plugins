@@ -55,7 +55,6 @@ plugins/
 | [docs/SECURITY.md](docs/SECURITY.md) | Security model & how to report vulnerabilities |
 | [FAQ.md](FAQ.md) | Frequently asked questions & troubleshooting |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to submit a pull request |
-| [CHANGELOG.md](CHANGELOG.md) | What changed and when |
 
 ### Tip for AI-Assisted Development
 
