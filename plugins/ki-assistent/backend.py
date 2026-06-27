@@ -604,12 +604,13 @@ def save_settings():
 @plugin_blueprint.route("/test", methods=["POST"])
 @require_auth()
 def test_connection():
-    settings = request.json or {}
-    provider = settings.get("provider", "ollama")
+    data = request.json or {}
+    stored = _get_ki_settings()
+    provider = data.get("provider", stored.get("provider", "ollama"))
     test_msg = [{"role": "user", "content": "Antworte nur mit dem Wort OK."}]
 
     if provider == "ollama":
-        base_url_raw = (settings.get("ollama_url") or OLLAMA_DEFAULT_URL).strip()
+        base_url_raw = (stored.get("ollama_url") or OLLAMA_DEFAULT_URL).strip()
         parsed_base = urllib.parse.urlsplit(base_url_raw)
 
         if parsed_base.scheme not in ("http", "https") or not parsed_base.netloc:
@@ -624,7 +625,7 @@ def test_connection():
 
         if not _is_safe_url(url, allow_localhost=True):
             return json_response({"status": "error", "message": "Ungültige URL"})
-        payload = {"model": settings.get("ollama_model", "llama3.2"), "messages": test_msg, "stream": False}
+        payload = {"model": data.get("ollama_model", stored.get("ollama_model", "llama3.2")), "messages": test_msg, "stream": False}
         req = urllib.request.Request(
             url,
             data=json_module.dumps(payload).encode('utf-8'),
@@ -638,8 +639,8 @@ def test_connection():
         except Exception as e:
             return json_response({"status": "error", "message": str(e)})
     else:
-        api_key = settings.get("api_key", "")
-        raw_url = settings.get("api_url", "https://api.openai.com/v1/chat/completions")
+        api_key = stored.get("api_key", "")
+        raw_url = stored.get("api_url", "https://api.openai.com/v1/chat/completions")
         url = raw_url.strip().rstrip("/")
         if not api_key:
             return json_response({"status": "error", "message": "API-Key fehlt"})
@@ -647,7 +648,7 @@ def test_connection():
             return json_response({"status": "error", "message": "Ungültige URL"})
         if not _is_safe_url(url, allow_localhost=False):
             return json_response({"status": "error", "message": "Ungültige URL"})
-        payload = {"model": settings.get("api_model", "gpt-4o-mini"), "messages": test_msg}
+        payload = {"model": data.get("api_model", stored.get("api_model", "gpt-4o-mini")), "messages": test_msg}
         req = urllib.request.Request(
             url,
             data=json_module.dumps(payload).encode('utf-8'),
