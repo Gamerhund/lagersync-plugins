@@ -609,7 +609,19 @@ def test_connection():
     test_msg = [{"role": "user", "content": "Antworte nur mit dem Wort OK."}]
 
     if provider == "ollama":
-        url = settings.get("ollama_url", OLLAMA_DEFAULT_URL) + "/api/chat"
+        base_url_raw = (settings.get("ollama_url") or OLLAMA_DEFAULT_URL).strip()
+        parsed_base = urllib.parse.urlsplit(base_url_raw)
+
+        if parsed_base.scheme not in ("http", "https") or not parsed_base.netloc:
+            return json_response({"status": "error", "message": "Ungültige URL"})
+        if parsed_base.path not in ("", "/") or parsed_base.query or parsed_base.fragment:
+            return json_response({"status": "error", "message": "Ungültige URL"})
+        if parsed_base.username or parsed_base.password:
+            return json_response({"status": "error", "message": "Ungültige URL"})
+
+        normalized_base = urllib.parse.urlunsplit((parsed_base.scheme, parsed_base.netloc, "", "", ""))
+        url = urllib.parse.urljoin(normalized_base + "/", "api/chat")
+
         if not _is_safe_url(url, allow_localhost=True):
             return json_response({"status": "error", "message": "Ungültige URL"})
         payload = {"model": settings.get("ollama_model", "llama3.2"), "messages": test_msg, "stream": False}
