@@ -8,19 +8,17 @@ Pytest Konfiguration für Plugin-Tests
 import pytest
 import json
 import os
+import sys
 from pathlib import Path
 
 PLUGIN_DIR = Path(__file__).parent.parent / "plugins"
 
-# Plugins die vom Maintainer (Jonas) persönlich geprüft und freigegeben wurden.
-# Nur Jonas ergänzt hier Einträge – gleichzeitig mit dem Setzen von "verified": true
-# in der plugin.json und dem Hinzufügen der Ed25519-Signatur.
-MAINTAINER_VERIFIED_PLUGINS = frozenset([
-    "ki-assistent",
-    "low_stock_notifications",
-    "pro-design",
-    "sso",
-])
+# Liste kommt aus .github/verified_plugins.py - das ist die einzige Stelle,
+# die man beim Freigeben eines neuen Plugins anfassen muss. Diese Datei hier
+# importiert nur davon, damit pytest-Tests und update_readme.py garantiert
+# dieselbe Liste sehen.
+sys.path.insert(0, str(Path(__file__).parent.parent / ".github"))
+from verified_plugins import MAINTAINER_VERIFIED_PLUGINS  # noqa: E402
 
 @pytest.fixture
 def plugin_dir():

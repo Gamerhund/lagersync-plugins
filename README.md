@@ -53,7 +53,6 @@ plugins/
 | [docs/SECURITY.md](docs/SECURITY.md) | Sicherheitsmodell & Schwachstellen melden |
 | [FAQ.md](FAQ.md) | Häufige Fragen & Troubleshooting |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Ablauf für Pull Requests |
-| [CHANGELOG.md](CHANGELOG.md) | Was sich wann geändert hat |
 
 **Tipp für KI-gestützte Entwicklung:** Gib [docs/PLUGINS_KI.md](docs/PLUGINS_KI.md) einer KI (z.B. Claude oder ChatGPT) und beschreibe was dein Plugin tun soll – sie generiert direkt PR-fertigen Code der alle automatischen Tests besteht.
 

@@ -1,83 +1,67 @@
 # ❓ FAQ
 
-Häufige Fragen rund um Plugin-Entwicklung, Pull Requests und den Marketplace. Tiefere Details stehen jeweils in [docs/PLUGINS.md](docs/PLUGINS.md).
+Fragen, die garantiert nochmal aufkommen. Wenn deine nicht dabei ist: [Issue aufmachen](https://github.com/Gamerhund/lagersync-plugins/issues), und sie landet beim nächsten Mal hier.
 
----
+### Mein Plugin taucht nicht im Marketplace auf
 
-## Warum erscheint mein Plugin nicht im Marketplace?
+Drei Klassiker, in der Reihenfolge, in der ich sie selbst am häufigsten verbockt habe:
 
-Prüfe in dieser Reihenfolge:
+- Der PR ist noch nicht gemerged. Klingt offensichtlich, aber genau das ist meistens es.
+- Der Plugin-Ordner liegt nicht direkt unter `plugins/`. Wer schon mal versehentlich `plugin.json` ins Repo-Root gelegt hat (ja, ist hier schon passiert, [#10](https://github.com/Gamerhund/lagersync-plugins/pull/10)), weiß: das wird einfach nicht geladen.
+- `"enabled": false` – dann ist es zwar installiert, aber inaktiv bis du es manuell anschaltest. Das ist Absicht, kein Bug, siehe [PLUGINS.md](docs/PLUGINS.md#pluginjson--pflichtdatei).
 
-1. Ist der PR gemerged? Vor dem Merge ist das Plugin nur im PR sichtbar, nicht im Marketplace.
-2. Liegt dein Plugin-Ordner wirklich unter `plugins/<name>/`? Ein `plugin.json` direkt im Repo-Root wird **nicht** geladen (das ist genau das, was bei [Test Plugin V5](https://github.com/Gamerhund/lagersync-plugins/pull/10) versehentlich passiert ist).
-3. Ist `plugin.json` gültiges JSON und enthält alle Pflichtfelder (`name`, `version`, `author`, `description`, `verified`, `enabled`)?
-4. Steht `"enabled": false`? Dann wird das Plugin beim Start nicht geladen.
+### Der PR ist rot, was jetzt
 
-## Warum schlägt mein PR fehl?
+Der Bot kommentiert deinen PR mit einer Aufschlüsselung nach Kategorie – da steht meistens schon, woran's hängt:
 
-Der CI-Bot kommentiert deinen PR mit einer Auswertung nach Kategorie. Schau zuerst dort nach, welche Kategorie fehlschlägt:
+- **Struktur** – meist ein fehlendes Feld in `plugin.json` oder die Version ist nicht `X.Y.Z`
+- **Verified** – du hast `"verified": true` gesetzt. Das ist mein Job, nicht deiner, lass es auf `false`
+- **Permissions** – eine Permission, die es nicht gibt, oder `permissions` ist kein Array
+- **Dateien** – `backend.py` hat einen Syntaxfehler oder `frontend.js` ist leer
+- **Code-Scanner** – irgendwo steckt `eval()`, `subprocess`, `os.system()` o.ä. drin, siehe [SECURITY.md](docs/SECURITY.md)
 
-| Kategorie im Bot-Kommentar | Mögliche Ursache |
-|---|---|
-| 📁 Struktur | `plugin.json` fehlt/ungültig, Pflichtfeld fehlt, Version nicht im Format `X.Y.Z`, Ordnername mit Großbuchstaben/Leerzeichen |
-| ✅ Verified | `"verified": true` in einem neuen Plugin gesetzt – das darfst du nicht selbst, siehe [unten](#warum-darf-ich-verified-nicht-selbst-auf-true-setzen) |
-| 🔑 Permissions | Eine Permission in `plugin.json`, die nicht in der [gültigen Liste](docs/PLUGINS.md#plugin-sicherheit) steht, oder `permissions` ist kein Array |
-| 📄 Dateien | `backend.py` hat einen Syntaxfehler oder definiert kein `plugin_blueprint`; `frontend.js` ist leer |
-| 🔒 Code-Scanner | Ein gefährliches Muster wie `eval()`, `subprocess`, `os.system()` o.ä. im Code – siehe [SECURITY.md](docs/SECURITY.md#2-code-scanner-statische-analyse-beim-laden) |
-| 🖊️ Signatur | Nur relevant bei `"verified": true` ohne gültige `plugin.sig` – als neues Plugin sollte das nicht auftreten |
+CodeQL und SonarCloud laufen daneben unabhängig vom pytest-Lauf – wenn die meckern, steht's im jeweiligen Check, nicht im Bot-Kommentar.
 
-Zusätzlich müssen **CodeQL** und der **SonarCloud Quality Gate** grün sein – beide laufen unabhängig von den pytest-Checks. Schau in die jeweiligen Check-Details im PR für die genaue Fehlermeldung.
+### Warum darf ich `verified` nicht selbst auf `true` setzen
 
-## Warum darf ich `verified` nicht selbst auf `true` setzen?
+Weil das Feld heißt "ich, Jonas, hab mir den Code persönlich angeschaut" – nicht "die Tests sind grün". Wenn dein frisches Plugin mit `true` ankommt, soll der Test absichtlich rot werden. Lass es auf `false`, ich kümmere mich um den Rest nach Review.
 
-`verified: true` bedeutet "der Maintainer hat den Code persönlich geprüft und freigegeben" – nicht "die automatischen Tests sind grün". Ein neues Plugin mit `"verified": true` schlägt deshalb absichtlich den Test `test_plugin_verified.py` fehl. Lass das Feld auf `false`; der Maintainer setzt es nach Prüfung zusammen mit der Ed25519-Signatur.
+### `frontend.js` macht nichts
 
-## Warum funktioniert mein `frontend.js` nicht?
+Browser-Konsole aufmachen, da steht's meistens. Ein paar Dinge, die gerne übersehen werden:
 
-- Öffne die Browser-Konsole (DevTools) – Syntaxfehler oder Laufzeitfehler werden dort angezeigt, das Script läuft aber lokal nicht im CI-Browser, nur `node --check` prüft die Syntax.
-- `frontend.js` darf nicht leer sein (`test_plugin_files.py` prüft das).
-- `pluginId` und `PluginAPI` sind nur zur Laufzeit im Browser verfügbar, nicht in einem reinen Node-Kontext – ein lokaler `node frontend.js`-Test schlägt deshalb mit `PluginAPI is not defined` fehl, das ist normal.
+- `pluginId` und `PluginAPI` gibt's nur im Browser zur Laufzeit. Ein lokales `node frontend.js` wirft deshalb `PluginAPI is not defined` – das ist normal, keine Sorge.
+- Leere `frontend.js` lässt der Test nicht durch.
 
-## Welche Permissions darf ich nutzen?
+### Welche Permissions gibt's überhaupt
 
-Die vollständige, gültige Liste steht in [docs/PLUGINS.md](docs/PLUGINS.md#plugin-sicherheit) und wird von `test_plugin_permissions.py` gegen genau diese Liste geprüft. Fordere nur an, was du wirklich brauchst – das beschleunigt auch die manuelle Review (siehe [CONTRIBUTING.md](CONTRIBUTING.md#review-kriterien)).
+Steht in [PLUGINS.md](docs/PLUGINS.md#-plugin-sicherheit), und `test_plugin_permissions.py` prüft exakt gegen diese Liste. Generell: je weniger du anforderst, desto schneller schau ich mir den PR an.
 
-## Wie teste ich mein Plugin lokal, bevor ich den PR erstelle?
+### Wie teste ich lokal, bevor ich den PR aufmache
 
 ```bash
 pip install -r requirements.txt
 pytest tests/ -v
 ```
 
-Einzelne Kategorie:
-```bash
-pytest tests/test_plugin_structure.py -v
-```
+Der JS-Syntax-Check braucht Node lokal installiert – ist keins da, wird er übersprungen statt zu scheitern, genau wie in CI.
 
-Der JavaScript-Syntax-Check (`test_plugin_syntax.py::test_javascript_syntax`) braucht lokal installiertes Node.js (`node --check`) – ist Node nicht installiert, wird der Test übersprungen statt zu scheitern, lokal wie in CI.
+### PLUGINS.md vs. PLUGINS_KI.md – was ist der Unterschied
 
-## Was ist der Unterschied zwischen `PLUGINS.md` und `PLUGINS_KI.md`?
+`PLUGINS.md` ist für Menschen, ausführlich. `PLUGINS_KI.md` ist die verdichtete Checkliste für KI-Agenten, die direkt Code schreiben sollen. Wenn die beiden sich widersprechen, gilt `PLUGINS.md` – die KI-Version wird daraus abgeleitet und kann mal hinterherhinken.
 
-`docs/PLUGINS.md` ist die vollständige, menschenlesbare Referenz. `docs/PLUGINS_KI.md` ist eine verdichtete Regel-Checkliste für KI-Agenten, die direkt Code generieren sollen. Bei Widersprüchen zwischen beiden gilt `PLUGINS.md` – siehe den Hinweis am Anfang von `PLUGINS_KI.md`.
+### Die README zeigt plötzlich andere Texte, obwohl ich sie nicht angefasst habe
 
-## Warum steht in der englischen README plötzlich Deutsch / warum hat sich die Plugin-Tabelle in der README verändert, obwohl ich sie nicht angefasst habe?
+Das war kein Versehen von dir. `update_readme.py` baut die Plugin-Tabelle und den "X verfügbar"-Badge automatisch aus den `plugin.json`-Dateien zusammen, jedes Mal wenn jemand nach `main` pusht. Per Hand in der Tabelle rumeditieren bringt also nichts – das überschreibt der Bot beim nächsten Lauf wieder. Beschreibung ändern willst du in der jeweiligen `plugin.json` (`description` für Deutsch, optional `description_en` für Englisch).
 
-Die Plugin-Tabelle und der "X verfügbar"-Badge werden automatisch von `.github/scripts/update_readme.py` aus `plugins/*/plugin.json` erzeugt, sobald jemand nach `main` pusht (als eigener PR von `github-actions[bot]`, kein Direkt-Commit). Bearbeite die Tabelle deshalb nicht händisch in der README.
+### Ich brauch Netzwerkzugriff, z.B. für einen Webhook
 
-Für die englische Beschreibung gilt: Neue, noch unsignierte Plugins können einfach `description_en` in ihrer `plugin.json` ergänzen. Bei bereits **verifizierten** Plugins würde das die Ed25519-Signatur (`plugin.sig`) invalidieren, deshalb pflegt der Maintainer deren englische Texte direkt in einer kleinen Übersetzungstabelle (`VERIFIED_PLUGIN_DESCRIPTIONS_EN`) im Skript selbst.
+Nicht über `socket` direkt – das blockiert der Scanner. Permission `system.network` anfordern und `PluginAPI.fetch()` nutzen, oder im Backend mit `requests`. `low_stock_notifications` macht genau das für Telegram/Discord, schau dir das als Vorlage an.
 
-## Ich will Netzwerkzugriff (z.B. einen Webhook aufrufen) – wie?
+### Ich will ein schon veröffentlichtes Plugin updaten
 
-Nicht über `socket` oder ähnliche Low-Level-Module (die blockiert der Code-Scanner). Fordere stattdessen die Permission `system.network` an und nutze `PluginAPI.fetch()` im Frontend, oder rufe externe APIs aus `backend.py` mit `requests`/`urllib` auf, sofern das in deinem Kontext erlaubt ist – schau dir `low_stock_notifications` als Referenz für Webhook/Telegram/Discord-Versand an.
+Neuer PR, Version in `plugin.json` hochzählen (SemVer, siehe [PLUGINS.md](docs/PLUGINS.md#-versionierung--migration)), Code ändern, fertig. Bei DB-Schema-Änderungen vorher kurz die Migrations-Hinweise dort lesen.
 
-## Kann ich ein bereits veröffentlichtes Plugin updaten?
+### Mein Plugin braucht eine Library, die nicht in `requirements.txt` steht
 
-Ja – neuer PR, der `plugin.json` (Version erhöhen, am besten nach [SemVer](docs/PLUGINS.md#-versionierung--migration)) und die Code-Dateien im bestehenden Plugin-Ordner ändert. Bei strukturellen Datenbank-Änderungen siehe die Migrations-Hinweise in `docs/PLUGINS.md`.
-
-## Mein Plugin braucht eine Bibliothek, die nicht in `requirements.txt` steht – geht das?
-
-`requirements.txt` in diesem Repo ist nur für die **Test-Infrastruktur** (pytest, cryptography). Was dein Plugin zur Laufzeit importieren darf, hängt von dem ab, was die LagerSync-Hauptanwendung bereitstellt, nicht von diesem Repo. Frag im entsprechenden Issue/PR nach, falls unklar.
-
----
-
-Frage nicht beantwortet? Öffne ein [Issue](https://github.com/Gamerhund/lagersync-plugins/issues).
+`requirements.txt` hier im Repo ist nur für die Tests selbst (pytest & co.), nicht für deinen Plugin-Code. Was dein Plugin zur Laufzeit darf, entscheidet die LagerSync-Hauptanwendung, nicht dieses Repo. Im Zweifel: Issue aufmachen und fragen.

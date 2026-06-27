@@ -1,10 +1,8 @@
 # 🏗 Architecture
 
-Wie ein Plugin technisch in LagerSync eingebunden wird – für Entwickler und besonders hilfreich für KI-Agenten, die das System schnell verstehen müssen.
+Wie ein Plugin technisch in LagerSync landet – hilfreich, wenn du verstehen willst, was beim Installieren eigentlich passiert, und ziemlich praktisch, wenn eine KI dir Plugin-Code schreiben soll und erst den Überblick braucht.
 
----
-
-## Überblick
+## Der grobe Weg
 
 ```mermaid
 flowchart TD
@@ -17,11 +15,9 @@ flowchart TD
     F --> G[("SQLite-Datenbank")]
 ```
 
-Dieses Repository ist **nur der Marketplace** – ein Katalog aus Plugin-Quellcode plus automatisierten Checks. Es enthält keine Laufzeitlogik. Geladen und ausgeführt werden Plugins von der LagerSync-Hauptanwendung.
+Dieses Repo ist nur der Marketplace – Quellcode plus automatisierte Checks, keine eigene Laufzeitlogik. Geladen und ausgeführt wird ein Plugin von der eigentlichen LagerSync-Anwendung, nicht von hier.
 
----
-
-## Was passiert beim Laden eines Plugins
+## Was beim Laden eines Plugins passiert
 
 ```mermaid
 sequenceDiagram
@@ -41,11 +37,9 @@ sequenceDiagram
     FE->>Core: PluginAPI.addMenuItem(...)
 ```
 
-Wichtig: **Permissions, Signatur-Prüfung und Code-Scan laufen serverseitig beim Laden** – nicht nur einmalig bei der PR-Review. Details dazu in [SECURITY.md](SECURITY.md).
+Permission-Check, Signatur-Prüfung und Code-Scan laufen serverseitig bei jedem Laden, nicht nur einmal bei der PR-Review – Details in [SECURITY.md](SECURITY.md).
 
----
-
-## Die drei Bausteine eines Plugins
+## Die drei Teile eines Plugins
 
 ```
 plugins/
@@ -56,17 +50,15 @@ plugins/
     └── frontend.js       ← Browser-Code, läuft im Client (optional)
 ```
 
-| Datei | Wo läuft sie? | Wer injiziert was? |
+| Datei | Läuft wo | Was wird injiziert |
 |---|---|---|
 | `plugin.json` | wird vom Core gelesen | – |
-| `backend.py` | im Flask-Prozess von LagerSync | Core injiziert `get_db_connection()`, `require_auth()`, `json_response()`, `session`, u.a. – siehe [PLUGINS.md](PLUGINS.md#injizierte-variablen) |
-| `frontend.js` | im Browser jedes Nutzers | Core injiziert `pluginId` und stellt `PluginAPI` global bereit |
+| `backend.py` | im Flask-Prozess von LagerSync | `get_db_connection()`, `require_auth()`, `json_response()`, `session`, ... siehe [PLUGINS.md](PLUGINS.md#injizierte-variablen) |
+| `frontend.js` | im Browser jedes Nutzers | `pluginId` und das globale `PluginAPI` |
 
-Ein Plugin kann auch **nur** `plugin.json` haben (z.B. ein reines Theme/Design-Plugin ohne eigenen Code) – siehe `pro-design` in `plugins/`.
+Ein Plugin kann auch nur aus `plugin.json` bestehen – `pro-design` macht das zum Beispiel, reines Theme ohne eigenen Code.
 
----
-
-## Anfrage-Fluss zur Laufzeit
+## Wie eine Anfrage zur Laufzeit läuft
 
 ```mermaid
 flowchart LR
@@ -81,16 +73,14 @@ flowchart LR
     Resp --> Browser
 ```
 
-Jede Backend-Route eines Plugins ist automatisch unter `/api/plugin/{plugin-ordner-name}/{route}` erreichbar – siehe [PLUGINS.md](PLUGINS.md#routen-urls).
+Jede Backend-Route landet automatisch unter `/api/plugin/{ordnername}/{route}` – siehe [PLUGINS.md](PLUGINS.md#routen-urls).
 
----
+## Wie Plugins miteinander reden (oder eben nicht direkt)
 
-## Datenfluss zwischen Plugins und Hauptanwendung
+Zwei Kanäle, kein geteilter Zustand:
 
-Plugins kommunizieren mit der Hauptanwendung über zwei Kanäle, nicht direkt über geteilten Zustand:
-
-1. **Events** – die Hauptanwendung löst Events aus (`bestand_geaendert`, `produkt_erstellt`, `produkt_geloescht`, `standort_gewechselt`), auf die `frontend.js` per `PluginAPI.onEvent(...)` reagieren kann. Plugins können auch eigene Events per `PluginAPI.emitEvent(...)` auslösen, auf die andere Plugins reagieren.
-2. **HTTP über `PluginAPI.fetch()`** – für alles, was Daten aus der Datenbank braucht oder serverseitige Logik erfordert.
+- **Events** – die Hauptanwendung feuert Events (`bestand_geaendert`, `produkt_erstellt`, `produkt_geloescht`, `standort_gewechselt`), die `frontend.js` per `PluginAPI.onEvent(...)` abfangen kann. Plugins können auch eigene Events per `PluginAPI.emitEvent(...)` rauswerfen, auf die andere reagieren.
+- **HTTP über `PluginAPI.fetch()`** – für alles, was eine DB-Abfrage oder Server-Logik braucht.
 
 ```mermaid
 flowchart TD
@@ -101,44 +91,33 @@ flowchart TD
     P2 -->|"PluginAPI.fetch(...)"| API2["/api/plugin/plugin-b/..."]
 ```
 
-Das hält Plugins voneinander entkoppelt: Plugin A muss nichts über Plugin B's internen Code wissen, um auf dessen Events zu reagieren.
+Plugin A muss also nichts über Plugin B's Code wissen, um auf dessen Events zu reagieren – das hält die Dinge entkoppelt.
 
----
+## Warum gerade vier Beispiel-Typen
 
-## Warum vier Plugin-Typen reichen, um das System zu verstehen
+[EXAMPLES.md](EXAMPLES.md) baut bewusst vom Einfachsten aus auf: Minimal (nur `plugin.json`), Backend-only, Frontend-only, Fullstack mit eigener DB-Tabelle und Tenant-Isolation. Die echten Plugins (`ki-assistent`, `low_stock_notifications`, `sso`) sind alle Fullstack und mehrere hundert Zeilen lang – gute Referenz, aber zum Reinkommen zu viel auf einmal.
 
-In [EXAMPLES.md](EXAMPLES.md) bauen wir bewusst auf den einfachsten Fall auf:
-
-1. **Minimal** – nur `plugin.json`, kein Code (z.B. ein Theme)
-2. **Backend-only** – eigene API-Route + DB-Tabelle, kein UI
-3. **Frontend-only** – nur UI, keine eigene API
-4. **Fullstack** – Backend + Frontend + eigene DB-Tabelle + Tenant-Isolation
-
-Die echten Plugins in `plugins/` (`ki-assistent`, `low_stock_notifications`, `sso`) sind alle production-grade Fullstack-Plugins mit mehreren hundert Zeilen Code – gut als Referenz, aber zu komplex als erster Einstieg.
-
----
-
-## Repository-Struktur (Marketplace, nicht LagerSync selbst)
+## Wie das Repo aufgebaut ist
 
 ```
 lagersync-plugins/
 ├── plugins/                     ← ein Ordner pro Plugin
-├── tests/                       ← automatisierte Plugin-Tests (laufen bei jedem PR)
+├── tests/                       ← automatisierte Plugin-Tests
 ├── docs/                        ← PLUGINS.md, PLUGINS_KI.md, EXAMPLES.md, ARCHITECTURE.md, SECURITY.md
 ├── .github/
-│   ├── CODEOWNERS               ← Pflicht-Review durch Maintainer bei jedem PR
+│   ├── CODEOWNERS               ← ich lande automatisch als Reviewer auf jedem PR
+│   ├── verified_plugins.py      ← einzige Quelle für "von mir geprüft"
 │   ├── dependabot.yml
 │   ├── workflows/
-│   │   ├── test.yml             ← CI: pytest + CodeQL + SonarCloud + PR-Kommentar-Bot
-│   │   └── update-readme.yml    ← regeneriert README.md/README_EN.md bei jedem Push nach main
+│   │   ├── test.yml             ← pytest + CodeQL + SonarCloud + PR-Kommentar-Bot
+│   │   └── update-readme.yml    ← baut README.md/README_EN.md bei jedem Push auf main neu
 │   └── scripts/
 │       ├── pr_review_analyzer.py
-│       └── update_readme.py     ← liest plugins/*/plugin.json, schreibt Plugin-Tabelle + Badge
+│       └── update_readme.py     ← liest plugins/*/plugin.json, schreibt Tabelle + Badge
 ├── CONTRIBUTING.md
-├── CHANGELOG.md
 ├── FAQ.md
 ├── README.md / README_EN.md
 └── LICENSE
 ```
 
-> Die Plugin-Tabelle und der „X verfügbar"-Badge in README.md/README_EN.md werden **nicht mehr manuell gepflegt** – `update_readme.py` generiert sie aus `plugins/*/plugin.json` neu, sobald auf `main` gepusht wird (als automatischer PR, nicht als Direkt-Commit). Die deutsche Beschreibung kommt aus `description`; für neue, noch unsignierte Plugins kannst du zusätzlich `description_en` setzen. Bei den vier bereits verifizierten Plugins steht die englische Übersetzung stattdessen in einer kleinen Tabelle direkt im Skript, weil eine Änderung an deren `plugin.json` die Ed25519-Signatur invalidieren würde – siehe [SECURITY.md](SECURITY.md#3-ed25519-signaturen).
+Die Plugin-Tabelle und der Badge in den READMEs werden nicht mehr von Hand gepflegt, sondern bei jedem Push auf `main` aus den `plugin.json`-Dateien neu generiert (als eigener PR, kein Direkt-Commit). Beschreibung ändert man also in der jeweiligen `plugin.json` – `description` fürs Deutsche, optional `description_en` fürs Englische. Bei den vier schon signierten Plugins steckt die englische Übersetzung stattdessen direkt im Skript, weil eine Änderung an deren `plugin.json` die Signatur kaputt machen würde – siehe [SECURITY.md](SECURITY.md#wie-das-plugin-system-abgesichert-ist).

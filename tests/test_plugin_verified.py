@@ -8,16 +8,15 @@ Prüft das verified Feld und die Autor-Informationen
 
 import pytest
 import json
+import sys
 from pathlib import Path
+
 try:
     from conftest import MAINTAINER_VERIFIED_PLUGINS
 except ModuleNotFoundError:
-    MAINTAINER_VERIFIED_PLUGINS = frozenset([
-        "ki-assistent",
-        "low_stock_notifications",
-        "pro-design",
-        "sso",
-    ])
+    # Falls die Datei mal ohne pytest direkt ausgefuehrt wird:
+    sys.path.insert(0, str(Path(__file__).parent.parent / ".github"))
+    from verified_plugins import MAINTAINER_VERIFIED_PLUGINS
 
 
 def test_verified_field_is_boolean(plugin_dir):
