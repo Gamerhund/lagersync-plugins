@@ -649,7 +649,8 @@ def save_settings():
 @require_auth()
 def test_connection():
     settings = request.json or {}
-    provider = settings.get("provider", "ollama")
+    stored = _get_ki_settings()
+    provider = settings.get("provider", stored.get("provider", "ollama"))
 
     # Einfacher Test ohne Tools
     test_msg = [{"role": "user", "content": "Antworte nur mit dem Wort OK."}]
@@ -657,7 +658,7 @@ def test_connection():
                         "messages": test_msg, "stream": False}
 
     if provider == "ollama":
-        url = settings.get("ollama_url", OLLAMA_DEFAULT_URL) + "/api/chat"
+        url = stored.get("ollama_url", OLLAMA_DEFAULT_URL) + "/api/chat"
         if not _is_safe_url(url, allow_localhost=True):
             return json_response({"status": "error", "message": "Ungültige URL"})
         req = urllib.request.Request(
@@ -674,7 +675,7 @@ def test_connection():
             return json_response({"status": "error", "message": str(e)})
     else:
         api_key = settings.get("api_key", "")
-        url = settings.get("api_url", "https://api.openai.com/v1/chat/completions")
+        url = stored.get("api_url", "https://api.openai.com/v1/chat/completions")
         if not api_key:
             return json_response({"status": "error", "message": "API-Key fehlt"})
         if not _is_safe_url(url, allow_localhost=False):
