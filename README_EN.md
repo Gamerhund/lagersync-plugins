@@ -12,10 +12,10 @@ Official plugin marketplace for LagerSync. Extend your inventory management syst
 
 | Plugin | Description | Type |
 |----------|-------------|------|
-| [**ki-assistent**](plugins/ki-assistent/) | KI-Chat mit Ollama/OpenAI-Integration. Kann Lagerbestände abfragen und Bestandsänderungen vornehmen. | ✅ Verified |
-| [**low_stock_notifications**](plugins/low_stock_notifications/) | Benachrichtigungen per Telegram, Discord, Webhook oder E-Mail. | ✅ Verified |
-| [**pro-design**](plugins/pro-design/) | Professionelle Design-Optionen und Themes für deine Lagerverwaltung. | ✅ Verified |
-| [**sso**](plugins/sso/) | Single Sign-On per OpenID Connect mit konfigurierbarem Username-Claim, Nonce, Logout, Scope und verbesserter Sicherheit. Funktioniert mit jedem OIDC-Provider. | ✅ Verified |
+| [**ki-assistent**](plugins/ki-assistent/) | AI chat with Ollama/OpenAI integration. Can query inventory levels and perform stock changes. | ✅ Verified |
+| [**low_stock_notifications**](plugins/low_stock_notifications/) | Notifications via Telegram, Discord, Webhook, or Email. | ✅ Verified |
+| [**pro-design**](plugins/pro-design/) | Professional design options and themes for your inventory management system. | ✅ Verified |
+| [**sso**](plugins/sso/) | Single sign-on via OpenID Connect with configurable username claim, nonce, logout, and scope, plus improved security. Works with any OIDC provider. | ✅ Verified |
 
 ---
 
@@ -48,16 +48,24 @@ plugins/
 
 | Documentation | Audience |
 |---------------|----------|
-| [PLUGINS.md](PLUGINS.md) | Developers – complete human-readable documentation |
-| [PLUGINS_KI.md](PLUGINS_KI.md) | AI-assisted development – optimized for AI agents |
+| [docs/PLUGINS.md](docs/PLUGINS.md) | Developers – complete human-readable documentation |
+| [docs/PLUGINS_KI.md](docs/PLUGINS_KI.md) | AI-assisted development – optimized for AI agents |
+| [docs/EXAMPLES.md](docs/EXAMPLES.md) | Four complete example plugins to learn from |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How a plugin technically plugs into the system |
+| [docs/SECURITY.md](docs/SECURITY.md) | Security model & how to report vulnerabilities |
+| [FAQ.md](FAQ.md) | Frequently asked questions & troubleshooting |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | How to submit a pull request |
+| [CHANGELOG.md](CHANGELOG.md) | What changed and when |
 
 ### Tip for AI-Assisted Development
 
-Provide `PLUGINS_KI.md` to an AI assistant such as ChatGPT or Claude and describe what your plugin should do. The AI can generate pull-request-ready code that follows the LagerSync plugin specification and passes automated tests.
+Provide `docs/PLUGINS_KI.md` to an AI assistant such as ChatGPT or Claude and describe what your plugin should do. The AI can generate pull-request-ready code that follows the LagerSync plugin specification and passes automated tests.
 
 ---
 
 ## 📤 Publish a Plugin
+
+The full process, including branch naming, required checks, and review criteria, is in [CONTRIBUTING.md](CONTRIBUTING.md). Short version:
 
 1. Fork this repository
 2. Create a new folder inside `plugins/` for your plugin
@@ -71,7 +79,7 @@ Provide `PLUGINS_KI.md` to an AI assistant such as ChatGPT or Claude and describ
 
 Contributions are welcome.
 
-Please read [PLUGINS.md](PLUGINS.md) before getting started. For bug reports, questions, and feature requests, use the GitHub Issues section.
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) before getting started – it covers branch names, required tests, and review criteria. For bug reports, questions, and feature requests, use the GitHub Issues section, or check the [FAQ.md](FAQ.md) for common questions.
 
 ---
 

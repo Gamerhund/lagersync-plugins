@@ -4,6 +4,12 @@
 > Lies sie vollständig bevor du anfängst Code zu schreiben.
 > Alle Regeln unten sind Pflicht – nicht optional.
 
+## Ziel & Geltungsbereich
+
+Diese Datei ist für KI-Assistenten (Claude, ChatGPT, Gemini, Cursor, Copilot, ...), die Plugins für dieses Repository generieren. Sie ist eine **verdichtete Regel-Checkliste**, kein Ersatz für [PLUGINS.md](PLUGINS.md).
+
+**Bei Konflikten zwischen den beiden Dateien gilt immer [PLUGINS.md](PLUGINS.md)** – diese Datei wird daraus abgeleitet und kann hinterherhinken.
+
 ---
 
 ## Regeln – unbedingt beachten
@@ -29,6 +35,8 @@ Im `tests/`-Ordner laufen automatisch folgende Checks – dein Plugin muss alle 
 | `test_plugin_verified.py` | `verified` ist boolean, `author`/`description` nicht leer, **`verified` ist `false`** |
 | `test_plugin_files.py` | `backend.py` valides Python, `plugin_blueprint` vorhanden, `frontend.js` nicht leer |
 | `test_plugin_signature.py` | Verifizierte Plugins haben gültige Ed25519-Signatur |
+| `test_plugin_code_scan.py` | Kein `os.system`, `subprocess`, `eval`, `exec`, `socket`, `pickle`, `shutil.rmtree`, Pfad-Traversal in `backend.py`/`frontend.js` |
+| `test_plugin_syntax.py` | `backend.py` kompiliert fehlerfrei, `frontend.js` ist syntaktisch gültiges JavaScript |
 
 **Der wichtigste Test:** `test_new_plugins_must_not_self_verify` – schlägt fehl wenn `"verified": true` in einem neuen Plugin steht.
 
