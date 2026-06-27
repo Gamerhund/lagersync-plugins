@@ -14,7 +14,7 @@ Prüft die grundlegende Struktur aller Plugins:
 
 ### test_plugin_permissions.py
 Prüft die Permissions in `plugin.json`:
-- Alle Permissions müssen gültig sein (siehe PLUGINS.md für vollständige Liste)
+- Alle Permissions müssen gültig sein (siehe [docs/PLUGINS.md](../docs/PLUGINS.md) für vollständige Liste)
 - `permissions` muss eine Liste sein
 
 ### test_plugin_verified.py
@@ -34,6 +34,17 @@ Prüft kryptografische Signaturen:
 - Verifizierte Plugins müssen eine `plugin.sig` Datei haben
 - Signatur muss gültiges base64 sein
 - Signatur muss mit dem offiziellen Public Key verifizierbar sein
+
+### test_plugin_code_scan.py
+Spiegelt die Logik des Produktions-Scanners (`plugin_security.py::scan_plugin_code()`):
+- Keine high-severity Muster: `os.system()`, `subprocess`, `eval()`, `exec()`, `__import__()`
+- Keine medium-severity Muster: `socket`, `pickle`, `shutil.rmtree`, Pfad-Traversal (`open('../...')`)
+- Für Netzwerkzugriff stattdessen `system.network` Permission + `PluginAPI.fetch()` verwenden
+
+### test_plugin_syntax.py
+Prüft ob `backend.py` und `frontend.js` syntaktisch fehlerfrei sind:
+- `backend.py` muss mit `py_compile` kompilieren
+- `frontend.js` muss `node --check` bestehen (wird übersprungen, falls Node.js nicht installiert ist)
 
 ## Tests lokal ausführen
 

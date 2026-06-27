@@ -46,14 +46,22 @@ plugins/
 
 | Dokumentation | Für wen |
 |---|---|
-| [PLUGINS.md](PLUGINS.md) | Entwickler – vollständige, menschenlesbare Dokumentation |
-| [PLUGINS_KI.md](PLUGINS_KI.md) | KI-gestützte Entwicklung – speziell für KI-Agenten aufbereitet |
+| [docs/PLUGINS.md](docs/PLUGINS.md) | Entwickler – vollständige, menschenlesbare Dokumentation |
+| [docs/PLUGINS_KI.md](docs/PLUGINS_KI.md) | KI-gestützte Entwicklung – speziell für KI-Agenten aufbereitet |
+| [docs/EXAMPLES.md](docs/EXAMPLES.md) | Vier vollständige Beispiel-Plugins zum Abschauen |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Wie ein Plugin technisch ins System eingebunden wird |
+| [docs/SECURITY.md](docs/SECURITY.md) | Sicherheitsmodell & Schwachstellen melden |
+| [FAQ.md](FAQ.md) | Häufige Fragen & Troubleshooting |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Ablauf für Pull Requests |
+| [CHANGELOG.md](CHANGELOG.md) | Was sich wann geändert hat |
 
-**Tipp für KI-gestützte Entwicklung:** Gib [PLUGINS_KI.md](PLUGINS_KI.md) einer KI (z.B. Claude oder ChatGPT) und beschreibe was dein Plugin tun soll – sie generiert direkt PR-fertigen Code der alle automatischen Tests besteht.
+**Tipp für KI-gestützte Entwicklung:** Gib [docs/PLUGINS_KI.md](docs/PLUGINS_KI.md) einer KI (z.B. Claude oder ChatGPT) und beschreibe was dein Plugin tun soll – sie generiert direkt PR-fertigen Code der alle automatischen Tests besteht.
 
 ---
 
 ## 📤 Plugin veröffentlichen
+
+Der vollständige Ablauf inkl. Branch-Namen, Pflicht-Checks und Review-Kriterien steht in [CONTRIBUTING.md](CONTRIBUTING.md). Kurzfassung:
 
 1. [Fork dieses Repository](https://github.com/Gamerhund/lagersync-plugins/fork)
 2. Erstelle einen neuen Ordner unter `plugins/` für dein Plugin
@@ -65,7 +73,7 @@ plugins/
 
 ## 🤝 Beitragen
 
-Contributions sind willkommen! Bitte lies [PLUGINS.md](PLUGINS.md) bevor du anfängst. Für Bugs und Feature-Wünsche nutze die [Issues](https://github.com/Gamerhund/lagersync-plugins/issues).
+Contributions sind willkommen! Bitte lies [CONTRIBUTING.md](CONTRIBUTING.md) bevor du anfängst – dort stehen Branch-Namen, Testpflichten und Review-Kriterien. Für Bugs und Feature-Wünsche nutze die [Issues](https://github.com/Gamerhund/lagersync-plugins/issues), für wiederkehrende Fragen gibt's die [FAQ.md](FAQ.md).
 
 ---
 
