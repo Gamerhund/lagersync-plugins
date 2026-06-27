@@ -25,6 +25,24 @@ MAINTAINER_VERIFIED_PLUGINS = frozenset([
     "sso",
 ])
 
+# English descriptions for already-signed/verified plugins.
+#
+# IMPORTANT: verified plugins have an Ed25519 signature (plugin.sig) computed
+# over their exact plugin.json content. Adding a "description_en" field to
+# plugin.json would change that content and invalidate the signature, which
+# only the maintainer can re-create with the private key. So for these
+# plugins we keep the translation here instead of in plugin.json.
+#
+# New, not-yet-verified community plugins don't have this problem (they have
+# no signature yet) - they can simply add "description_en" to their own
+# plugin.json, which takes priority below.
+VERIFIED_PLUGIN_DESCRIPTIONS_EN = {
+    "ki-assistent": "AI chat with Ollama/OpenAI integration. Can query inventory levels and perform stock changes.",
+    "low_stock_notifications": "Notifications via Telegram, Discord, Webhook, or Email.",
+    "pro-design": "Professional design options and themes for your inventory management system.",
+    "sso": "Single sign-on via OpenID Connect with configurable username claim, nonce, logout, and scope, plus improved security. Works with any OIDC provider.",
+}
+
 
 def load_plugin_metadata(plugin_dir: Path) -> Dict[str, dict]:
     """Load all plugin.json files from plugins/ directory."""
@@ -62,12 +80,20 @@ def generate_plugin_table(plugins: Dict[str, dict], lang: str = "de") -> str:
     for plugin_name in sorted(plugins.keys()):
         metadata = plugins[plugin_name]
         name = metadata.get("name", plugin_name)
-        description = metadata.get("description", "")
-        
-        # Use German description for DE README, English for EN README
-        # For now, we use the same description since all plugins have German descriptions
-        # In the future, you could add "description_en" field to plugin.json
-        
+
+        if lang == "en":
+            # Priority: explicit description_en in plugin.json (safe for new,
+            # not-yet-signed plugins) > known translation table (for already
+            # signed plugins, see VERIFIED_PLUGIN_DESCRIPTIONS_EN above) >
+            # German description as last-resort fallback.
+            description = (
+                metadata.get("description_en")
+                or VERIFIED_PLUGIN_DESCRIPTIONS_EN.get(plugin_name)
+                or metadata.get("description", "")
+            )
+        else:
+            description = metadata.get("description", "")
+
         status = verified_label if is_verified(plugin_name) else community_label
         
         row = f"| [**{plugin_name}**](plugins/{plugin_name}/) | {description} | {status} |"

@@ -127,64 +127,9 @@ Plugins müssen **explizit** Berechtigungen anfordern. Ohne Permission werden AP
 ["db.read", "inventory.read", "api.public"]
 ```
 
-### Plugin-Signaturen (Ed25519)
+### Plugin-Signaturen, Audit-Logs, Rate Limiting & Code-Scanner
 
-Offizielle Plugins können kryptografisch signiert werden.
-
-**Signatur erstellen (für Entwickler):**
-```bash
-# Private Key generieren (einmalig)
-python -c "from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey; \
-import base64; key = Ed25519PrivateKey.generate(); \
-print('Private:', base64.b64encode(key.private_bytes_raw()).decode()); \
-print('Public:', base64.b64encode(key.public_key().public_bytes_raw()).decode())"
-```
-
-**plugin.sig Datei:**
-```
-base64-encoded-signature
-```
-
-### Audit-Logs
-
-Alle Plugin-Aktionen werden protokolliert:
-- Plugin geladen/entladen
-- API-Aufrufe
-- Datenbank-Zugriffe
-- Konfigurationsänderungen
-
-```
-GET /api/plugins/{plugin_id}/audit
-```
-
-### Rate Limiting
-
-| Aktion | Limit |
-|--------|-------|
-| Default | 100 / 60s |
-| db.read | 50 / 60s |
-| db.write | 20 / 60s |
-| api.public | 100 / 60s |
-| api.admin | 30 / 60s |
-
-```
-GET /api/plugins/{plugin_id}/rate-limits
-```
-
-### Code-Scanner
-
-Beim Laden werden Plugins auf gefährliche Muster gescannt:
-
-- `os.system()` – Befehlsausführung
-- `subprocess` – Prozessausführung
-- `eval()` / `exec()` – Code-Ausführung
-- `socket` – Netzwerkzugriff
-- `shutil.rmtree` – Verzeichnis löschen
-- `pickle` – Unsichere Deserialisierung
-
-```
-GET /api/plugins/{plugin_id}/scan
-```
+Diese Mechanismen sind jetzt ausführlich in **[SECURITY.md](SECURITY.md)** beschrieben, damit diese Datei sich auf die plugin.json/API-Referenz konzentrieren kann. Kurzfassung: Verifizierte Plugins werden Ed25519-signiert, alle Aktionen werden auditiert, API-Aufrufe sind pro Permission rate-limitiert, und jedes Plugin wird beim Laden auf gefährliche Code-Muster gescannt.
 
 ---
 
@@ -393,9 +338,13 @@ PluginAPI.addMenuItem('Mein Plugin', '🔌', async function() {
 });
 ```
 
+**Mehr Beispiele:** [EXAMPLES.md](EXAMPLES.md) zeigt vier vollständige Plugins (Minimal, Backend-only, Frontend-only, Fullstack mit eigener DB-Tabelle, Tenant-Isolation und Error Handling) – oft hilfreicher zum Lernen als weitere Dokumentation.
+
 ---
 
 ## Plugin veröffentlichen (lagersync-plugins Repo)
+
+Der vollständige Ablauf inkl. Branch-Namen und Review-Kriterien steht in [CONTRIBUTING.md](../CONTRIBUTING.md). Kurzfassung:
 
 1. Fork dieses Repositories: https://github.com/Gamerhund/lagersync-plugins
 2. Erstelle einen neuen Ordner unter `plugins/` für dein Plugin
@@ -420,12 +369,7 @@ PluginAPI.addMenuItem('Mein Plugin', '🔌', async function() {
 
 ## Sicherheitshinweis
 
-> 🔒 **Security-Level: 8-9/10** – Das Plugin-System verfügt über:
-> - **Permissions System** – Plugins müssen Berechtigungen explizit anfordern
-> - **Ed25519 Signaturen** – Offizielle Plugins sind kryptografisch signiert
-> - **Audit-Logs** – Alle Aktionen werden protokolliert
-> - **Rate Limiting** – API-Aufrufe sind pro Zeiteinheit begrenzt
-> - **Code-Scanner** – Beim Laden wird auf gefährliche Muster geprüft
+> 🔒 Das Plugin-System hat mehrere Schutzschichten (Permissions, Signaturen, Audit-Logs, Rate Limiting, Code-Scanner). Details und wie man eine Sicherheitslücke meldet: **[SECURITY.md](SECURITY.md)**.
 
 Plugins ohne Verified-Badge wurden automatisch getestet, aber noch nicht persönlich geprüft. Getestete und verifizierte Plugins tragen das **✅ Verifiziert** Badge (`"verified": true`, gesetzt vom Maintainer).
 
