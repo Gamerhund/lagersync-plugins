@@ -8,6 +8,9 @@ import time
 plugin_blueprint = Blueprint("ki_assistent", __name__)
 
 OLLAMA_DEFAULT_URL = "http://localhost:11434"
+ALLOWED_EXTERNAL_API_URLS = {
+    "https://api.openai.com/v1/chat/completions",
+}
 
 TOOLS = [
     {
@@ -624,9 +627,12 @@ def test_connection():
             return json_response({"status": "error", "message": str(e)})
     else:
         api_key = settings.get("api_key", "")
-        url = settings.get("api_url", "https://api.openai.com/v1/chat/completions")
+        raw_url = settings.get("api_url", "https://api.openai.com/v1/chat/completions")
+        url = raw_url.strip().rstrip("/")
         if not api_key:
             return json_response({"status": "error", "message": "API-Key fehlt"})
+        if url not in ALLOWED_EXTERNAL_API_URLS:
+            return json_response({"status": "error", "message": "Ungültige URL"})
         if not _is_safe_url(url, allow_localhost=False):
             return json_response({"status": "error", "message": "Ungültige URL"})
         payload = {"model": settings.get("api_model", "gpt-4o-mini"), "messages": test_msg}
