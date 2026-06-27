@@ -8,8 +8,13 @@ import time
 plugin_blueprint = Blueprint("ki_assistent", __name__)
 
 OLLAMA_DEFAULT_URL = "http://localhost:11434"
+DEFAULT_OLLAMA_MODEL = "llama3.2"
+DEFAULT_OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
+DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
+CONTENT_TYPE_JSON = "application/json"
+ERR_INVALID_URL = "Ungültige URL"
 ALLOWED_EXTERNAL_API_URLS = {
-    "https://api.openai.com/v1/chat/completions",
+    DEFAULT_OPENAI_API_URL,
 }
 
 TOOLS = [
@@ -157,10 +162,10 @@ def _get_ki_settings():
     return {
         "provider": "ollama",
         "ollama_url": OLLAMA_DEFAULT_URL,
-        "ollama_model": "llama3.2",
+        "ollama_model": DEFAULT_OLLAMA_MODEL,
         "api_url": "",
         "api_key": "",
-        "api_model": "gpt-4o-mini",
+        "api_model": DEFAULT_OPENAI_MODEL,
         "enabled": True,
         "timeout": 600,
         "system_instruction": ""
@@ -340,7 +345,7 @@ def _dispatch_tool(tool_name: str, arguments: dict):
 
 def _call_ollama(settings, messages):
     url = settings.get("ollama_url", OLLAMA_DEFAULT_URL) + "/api/chat"
-    model = settings.get("ollama_model", "llama3.2")
+    model = settings.get("ollama_model", DEFAULT_OLLAMA_MODEL)
 
     if not _is_safe_url(url, allow_localhost=True):
         return None, "URL scheme not allowed"
@@ -350,7 +355,7 @@ def _call_ollama(settings, messages):
     req = urllib.request.Request(
         url,
         data=json_module.dumps(payload).encode('utf-8'),
-        headers={"Content-Type": "application/json"}
+        headers={"Content-Type": CONTENT_TYPE_JSON}
     )
 
     timeout = settings.get("timeout", 120)
@@ -389,10 +394,27 @@ def _call_ollama(settings, messages):
         return None, str(e)
 
 
+def _parse_openai_tool_calls(tool_calls_raw):
+    tool_calls = []
+    for tc in tool_calls_raw:
+        fn = tc.get("function", {})
+        args_raw = fn.get("arguments", "{}")
+        try:
+            args = json_module.loads(args_raw) if isinstance(args_raw, str) else args_raw
+        except Exception:
+            args = {}
+        tool_calls.append({
+            "id": tc.get("id", f"call_{int(time.time() * 1000)}"),
+            "type": "function",
+            "function": {"name": fn.get("name", ""), "arguments": args}
+        })
+    return tool_calls
+
+
 def _call_openai(settings, messages):
-    url = settings.get("api_url", "https://api.openai.com/v1/chat/completions")
+    url = settings.get("api_url", DEFAULT_OPENAI_API_URL)
     api_key = settings.get("api_key", "")
-    model = settings.get("api_model", "gpt-4o-mini")
+    model = settings.get("api_model", DEFAULT_OPENAI_MODEL)
 
     if not api_key:
         return None, "API-Key nicht konfiguriert"
@@ -405,7 +427,7 @@ def _call_openai(settings, messages):
         url,
         data=json_module.dumps(payload).encode('utf-8'),
         headers={
-            "Content-Type": "application/json",
+            "Content-Type": CONTENT_TYPE_JSON,
             "Authorization": f"Bearer {api_key}"
         }
     )
@@ -419,19 +441,7 @@ def _call_openai(settings, messages):
             finish_reason = choice.get("finish_reason", "")
 
             if finish_reason == "tool_calls" or message.get("tool_calls"):
-                tool_calls = []
-                for tc in message.get("tool_calls", []):
-                    fn = tc.get("function", {})
-                    args_raw = fn.get("arguments", "{}")
-                    try:
-                        args = json_module.loads(args_raw) if isinstance(args_raw, str) else args_raw
-                    except Exception:
-                        args = {}
-                    tool_calls.append({
-                        "id": tc.get("id", f"call_{int(time.time() * 1000)}"),
-                        "type": "function",
-                        "function": {"name": fn.get("name", ""), "arguments": args}
-                    })
+                tool_calls = _parse_openai_tool_calls(message.get("tool_calls", []))
                 return {
                     "type": "tool_calls",
                     "content": message.get("content") or "",
@@ -445,6 +455,31 @@ def _call_openai(settings, messages):
         return None, f"API-Fehler {e.code}: {body[:200]}"
     except Exception as e:
         return None, str(e)
+
+
+def _run_tool_calls(messages, tool_calls):
+    tools_used = []
+    messages.append({
+        "role": "assistant",
+        "content": "",
+        "tool_calls": tool_calls
+    })
+    for tc in tool_calls:
+        tool_name = tc["function"]["name"]
+        arguments = tc["function"]["arguments"]
+        if not isinstance(arguments, dict):
+            try:
+                arguments = json_module.loads(str(arguments))
+            except Exception:
+                arguments = {}
+        tool_result = _dispatch_tool(tool_name, arguments)
+        tools_used.append(tool_name)
+        messages.append({
+            "role": "tool",
+            "tool_call_id": tc["id"],
+            "content": json_module.dumps(tool_result, ensure_ascii=False)
+        })
+    return tools_used
 
 
 def _agentic_chat(settings, messages):
@@ -465,30 +500,7 @@ def _agentic_chat(settings, messages):
             return result["content"], None, tools_used
 
         if result["type"] == "tool_calls":
-            messages.append({
-                "role": "assistant",
-                "content": result.get("content") or "",
-                "tool_calls": result["tool_calls"]
-            })
-
-            for tc in result["tool_calls"]:
-                tool_name = tc["function"]["name"]
-                arguments = tc["function"]["arguments"]
-
-                if not isinstance(arguments, dict):
-                    try:
-                        arguments = json_module.loads(str(arguments))
-                    except Exception:
-                        arguments = {}
-
-                tool_result = _dispatch_tool(tool_name, arguments)
-                tools_used.append(tool_name)
-
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": tc["id"],
-                    "content": json_module.dumps(tool_result, ensure_ascii=False)
-                })
+            tools_used += _run_tool_calls(messages, result["tool_calls"])
 
     return None, f"Abbruch nach {MAX_ITERATIONS} Tool-Aufrufen ohne Textantwort", tools_used
 
@@ -601,66 +613,78 @@ def save_settings():
     return json_response({"status": "ok"})
 
 
+def _validate_ollama_url(raw_url):
+    parsed = urllib.parse.urlsplit(raw_url)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        return None, ERR_INVALID_URL
+    if parsed.path not in ("", "/") or parsed.query or parsed.fragment:
+        return None, ERR_INVALID_URL
+    if parsed.username or parsed.password:
+        return None, ERR_INVALID_URL
+    normalized = urllib.parse.urlunsplit((parsed.scheme, parsed.netloc, "", "", ""))
+    url = urllib.parse.urljoin(normalized + "/", "api/chat")
+    if not _is_safe_url(url, allow_localhost=True):
+        return None, ERR_INVALID_URL
+    return url, None
+
+
+def _test_ollama(stored, model):
+    test_msg = [{"role": "user", "content": "Antworte nur mit dem Wort OK."}]
+    base_url_raw = (stored.get("ollama_url") or OLLAMA_DEFAULT_URL).strip()
+    url, err = _validate_ollama_url(base_url_raw)
+    if err:
+        return json_response({"status": "error", "message": err})
+    payload = {"model": model, "messages": test_msg, "stream": False}
+    req = urllib.request.Request(
+        url,
+        data=json_module.dumps(payload).encode('utf-8'),
+        headers={"Content-Type": CONTENT_TYPE_JSON}
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:  # nosec B310
+            data = json_module.loads(resp.read().decode('utf-8'))
+            content = data.get("message", {}).get("content", "OK")
+            return json_response({"status": "ok", "response": content[:100]})
+    except Exception as e:
+        return json_response({"status": "error", "message": str(e)})
+
+
+def _test_openai(stored, model):
+    test_msg = [{"role": "user", "content": "Antworte nur mit dem Wort OK."}]
+    api_key = stored.get("api_key", "")
+    url = stored.get("api_url", DEFAULT_OPENAI_API_URL).strip().rstrip("/")
+    if not api_key:
+        return json_response({"status": "error", "message": "API-Key fehlt"})
+    if url not in ALLOWED_EXTERNAL_API_URLS:
+        return json_response({"status": "error", "message": ERR_INVALID_URL})
+    if not _is_safe_url(url, allow_localhost=False):
+        return json_response({"status": "error", "message": ERR_INVALID_URL})
+    payload = {"model": model, "messages": test_msg}
+    req = urllib.request.Request(
+        url,
+        data=json_module.dumps(payload).encode('utf-8'),
+        headers={"Content-Type": CONTENT_TYPE_JSON, "Authorization": f"Bearer {api_key}"}
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:  # nosec B310
+            data = json_module.loads(resp.read().decode('utf-8'))
+            content = data.get("choices", [{}])[0].get("message", {}).get("content", "OK")
+            return json_response({"status": "ok", "response": content[:100]})
+    except Exception as e:
+        return json_response({"status": "error", "message": str(e)})
+
+
 @plugin_blueprint.route("/test", methods=["POST"])
 @require_auth()
 def test_connection():
     data = request.json or {}
     stored = _get_ki_settings()
     provider = data.get("provider", stored.get("provider", "ollama"))
-    test_msg = [{"role": "user", "content": "Antworte nur mit dem Wort OK."}]
-
     if provider == "ollama":
-        base_url_raw = (stored.get("ollama_url") or OLLAMA_DEFAULT_URL).strip()
-        parsed_base = urllib.parse.urlsplit(base_url_raw)
-
-        if parsed_base.scheme not in ("http", "https") or not parsed_base.netloc:
-            return json_response({"status": "error", "message": "Ungültige URL"})
-        if parsed_base.path not in ("", "/") or parsed_base.query or parsed_base.fragment:
-            return json_response({"status": "error", "message": "Ungültige URL"})
-        if parsed_base.username or parsed_base.password:
-            return json_response({"status": "error", "message": "Ungültige URL"})
-
-        normalized_base = urllib.parse.urlunsplit((parsed_base.scheme, parsed_base.netloc, "", "", ""))
-        url = urllib.parse.urljoin(normalized_base + "/", "api/chat")
-
-        if not _is_safe_url(url, allow_localhost=True):
-            return json_response({"status": "error", "message": "Ungültige URL"})
-        payload = {"model": data.get("ollama_model", stored.get("ollama_model", "llama3.2")), "messages": test_msg, "stream": False}
-        req = urllib.request.Request(
-            url,
-            data=json_module.dumps(payload).encode('utf-8'),
-            headers={"Content-Type": "application/json"}
-        )
-        try:
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                data = json_module.loads(resp.read().decode('utf-8'))
-                content = data.get("message", {}).get("content", "OK")
-                return json_response({"status": "ok", "response": content[:100]})
-        except Exception as e:
-            return json_response({"status": "error", "message": str(e)})
-    else:
-        api_key = stored.get("api_key", "")
-        raw_url = stored.get("api_url", "https://api.openai.com/v1/chat/completions")
-        url = raw_url.strip().rstrip("/")
-        if not api_key:
-            return json_response({"status": "error", "message": "API-Key fehlt"})
-        if url not in ALLOWED_EXTERNAL_API_URLS:
-            return json_response({"status": "error", "message": "Ungültige URL"})
-        if not _is_safe_url(url, allow_localhost=False):
-            return json_response({"status": "error", "message": "Ungültige URL"})
-        payload = {"model": data.get("api_model", stored.get("api_model", "gpt-4o-mini")), "messages": test_msg}
-        req = urllib.request.Request(
-            url,
-            data=json_module.dumps(payload).encode('utf-8'),
-            headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
-        )
-        try:
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                data = json_module.loads(resp.read().decode('utf-8'))
-                content = data.get("choices", [{}])[0].get("message", {}).get("content", "OK")
-                return json_response({"status": "ok", "response": content[:100]})
-        except Exception as e:
-            return json_response({"status": "error", "message": str(e)})
+        model = data.get("ollama_model", stored.get("ollama_model", DEFAULT_OLLAMA_MODEL))
+        return _test_ollama(stored, model)
+    model = data.get("api_model", stored.get("api_model", DEFAULT_OPENAI_MODEL))
+    return _test_openai(stored, model)
 
 
 @plugin_blueprint.route("/models", methods=["GET"])
