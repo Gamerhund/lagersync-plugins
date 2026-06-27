@@ -62,7 +62,6 @@
       api_key: document.getElementById('kiApiKey')?.value || '',
       api_model: document.getElementById('kiApiModel')?.value || '',
       timeout: Number.parseInt(document.getElementById('kiTimeout')?.value, 10) || 120,
-      product_limit: Number.parseInt(document.getElementById('kiProductLimit')?.value, 10) || 50,
       system_instruction: document.getElementById('kiSystemInstruction')?.value || ''
     };
   }
@@ -208,9 +207,11 @@
         </div>
 
         <div style="margin-bottom:20px;padding:14px;background:rgba(255,255,255,0.05);border-radius:12px">
-          <label style="display:block;margin-bottom:8px;font-weight:600;font-size:0.9em">📦 Produkt-Abruf-Limit</label>
-          <input id="kiProductLimit" type="number" value="${s.product_limit || 50}" min="5" max="500" style="width:120px;padding:10px;border-radius:8px">
-          <div style="font-size:0.75em;opacity:0.5;margin-top:4px">Wie viele Produkte pro Anfrage als Kontext mitgeschickt werden (5-500)</div>
+          <label style="display:block;margin-bottom:8px;font-weight:600;font-size:0.9em">🛠️ Tool Calling</label>
+          <div style="font-size:0.82em;opacity:0.7;line-height:1.5">
+            Die KI fragt Lagerdaten aktiv per Tool ab – kein manuelles Limit mehr nötig.<br>
+            Empfohlene Modelle: <code>llama3.2</code>, <code>llama3.1</code>, <code>qwen2.5</code>, <code>mistral-nemo</code>
+          </div>
         </div>
 
         <div style="margin-bottom:20px;padding:14px;background:rgba(255,255,255,0.05);border-radius:12px">
@@ -360,6 +361,16 @@
     return { controller, timeoutId };
   }
 
+  // Labels für die angezeigten Tool-Badges im Chat
+  const _toolLabels = {
+    search_products:            '🔍 Suche',
+    get_low_stock:              '⚠️ Mindestbestand',
+    get_locations:              '📍 Lagerorte',
+    get_inventory_by_location:  '📦 Lagerort',
+    get_statistics:             '📊 Statistik',
+    change_stock:               '✏️ Bestand geändert'
+  };
+
   function _kiHandleApiResponse(container, data, msg) {
     if (data.status !== 'ok') {
       _kiRenderError(container, data.message || 'Unbekannter Fehler');
@@ -370,6 +381,15 @@
     _chatHistory.push({ role: 'user', content: msg }, { role: 'assistant', content: response });
     if (isFirstMessage) { _kiSaveSession(msg); }
     container.innerHTML += _renderChatBubble(response, false);
+
+    // Tool-Badges anzeigen, damit sichtbar ist was die KI abgefragt hat
+    const toolsUsed = Array.isArray(data.tools_used) ? data.tools_used : [];
+    if (toolsUsed.length > 0) {
+      // Duplikate entfernen und Labels umwandeln
+      const unique = [...new Set(toolsUsed)];
+      const badges = unique.map(t => _toolLabels[t] || t).join(' · ');
+      container.innerHTML += `<div style="font-size:0.72em;opacity:0.35;text-align:right;padding:2px 6px 6px">${badges}</div>`;
+    }
   }
 
   globalThis._kiSendMessage = async function() {
@@ -390,7 +410,7 @@
     container.innerHTML += `
       <div id="${loadingId}" style="display:flex;justify-content:flex-start">
         <div style="background:rgba(255,255,255,0.08);padding:10px 16px;border-radius:16px 16px 16px 4px;max-width:80%">
-          <span style="opacity:0.6">⏳ Denkt nach...</span>
+          <span style="opacity:0.6">⏳ Frage Lagerdaten ab...</span>
         </div>
       </div>
     `;

@@ -1,6 +1,6 @@
 {
   "name": "KI Lagerassistent",
-  "version": "2.1.1",
+  "version": "2.2.1",
   "author": "Jonas (Gamerhund)",
   "description": "KI-Chat mit Ollama/OpenAI-Integration. Kann Lagerbestände abfragen und Bestandsänderungen vornehmen.",
   "verified": true,
