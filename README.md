@@ -46,11 +46,11 @@ plugins/
 
 | Dokumentation | Für wen |
 |---|---|
-| [docs/PLUGINS.md](docs/PLUGINS.md) | Entwickler – vollständige, menschenlesbare Dokumentation |
-| [docs/PLUGINS_KI.md](docs/PLUGINS_KI.md) | KI-gestützte Entwicklung – speziell für KI-Agenten aufbereitet |
-| [docs/EXAMPLES.md](docs/EXAMPLES.md) | Vier vollständige Beispiel-Plugins zum Abschauen |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Wie ein Plugin technisch ins System eingebunden wird |
-| [docs/SECURITY.md](docs/SECURITY.md) | Sicherheitsmodell & Schwachstellen melden |
+| [PLUGINS.md](docs/PLUGINS.md) | Entwickler – vollständige, menschenlesbare Dokumentation |
+| [PLUGINS_KI.md](docs/PLUGINS_KI.md) | KI-gestützte Entwicklung – speziell für KI-Agenten aufbereitet |
+| [EXAMPLES.md](docs/EXAMPLES.md) | Vier vollständige Beispiel-Plugins zum Abschauen |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Wie ein Plugin technisch ins System eingebunden wird |
+| [SECURITY.md](docs/SECURITY.md) | Sicherheitsmodell & Schwachstellen melden |
 | [FAQ.md](FAQ.md) | Häufige Fragen & Troubleshooting |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Ablauf für Pull Requests |
 
