@@ -42,6 +42,13 @@ Keine harte Regel, aber bitte halbwegs danach:
 
 Alle drei müssen grün sein. Der Bot kommentiert den PR zusätzlich mit einer Aufschlüsselung nach Kategorie – wenn was rot ist, steht meist schon dabei, warum (siehe auch [FAQ.md](FAQ.md#der-pr-ist-rot-was-jetzt)). Über [CODEOWNERS](.github/CODEOWNERS) lande ich automatisch als Reviewer auf jedem PR.
 
+Derselbe Bot setzt außerdem zwei Labels, rein automatisch eingeschätzt, damit ich auch beim ersten kurzen Blick schon ungefähr weiß worum's geht, falls ich nicht sofort Zeit zum Reinlesen habe:
+
+- **`type:`** feature (neues Plugin) · update (bestehendes geändert) · docs · chore · other
+- **`risk:`** low · medium · high – high z.B. bei Änderungen an `.github/workflows/`, `docs/SECURITY.md`, neuen Permissions wie `db.write`/`api.admin`, oder verdächtigen Code-Mustern im Diff
+
+Ist nur eine grobe erste Einordnung, kein Ersatz für den Code-Scanner-Test oder mein eigenes Reinschauen – aber besser als nichts, wenn ich gerade unterwegs bin.
+
 ## Worauf ich beim Review schaue
 
 - Ordner liegt wirklich unter `plugins/<name>/`
