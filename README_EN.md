@@ -48,11 +48,11 @@ plugins/
 
 | Documentation | Audience |
 |---------------|----------|
-| [docs/PLUGINS.md](docs/PLUGINS.md) | Developers – complete human-readable documentation |
-| [docs/PLUGINS_KI.md](docs/PLUGINS_KI.md) | AI-assisted development – optimized for AI agents |
-| [docs/EXAMPLES.md](docs/EXAMPLES.md) | Four complete example plugins to learn from |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How a plugin technically plugs into the system |
-| [docs/SECURITY.md](docs/SECURITY.md) | Security model & how to report vulnerabilities |
+| [PLUGINS.md](docs/PLUGINS.md) | Developers – complete human-readable documentation |
+| [PLUGINS_KI.md](docs/PLUGINS_KI.md) | AI-assisted development – optimized for AI agents |
+| [EXAMPLES.md](docs/EXAMPLES.md) | Four complete example plugins to learn from |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | How a plugin technically plugs into the system |
+| [SECURITY.md](docs/SECURITY.md) | Security model & how to report vulnerabilities |
 | [FAQ.md](FAQ.md) | Frequently asked questions & troubleshooting |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to submit a pull request |
 
