@@ -31,12 +31,14 @@ und je weniger davon, desto schneller geht auch die Review.
 | `shutil.rmtree` | mittel | rekursives Löschen |
 | `open('../...')` | mittel | Pfad-Traversal |
 
-Hohe Stufe blockiert das Plugin komplett, mittlere gibt nur eine Warnung.
+Hohe Stufe blockiert das Plugin beim Laden (Runtime-Loader), mittlere gibt nur eine Warnung.
 
-**Signaturen.** Plugins, die ich persönlich geprüft habe, signiere ich mit Ed25519 (`plugin.sig`). Das bestätigt: der Code, der ausgeliefert wird, ist genau der, den ich mir angeschaut habe – nicht irgendwas, das danach noch verändert wurde.
+**Signaturen.** Plugins, die ich persönlich geprüft habe, signiere ich mit Ed25519 (`plugin.sig`). Die Signatur bestätigt die Integrität: exakt diese Dateien wurden seit der Signierung nicht verändert. Das "ich habe es geprüft" ergibt sich daraus, dass ich signiere.
 
 ```bash
 # Private Key generieren (einmalig, nur ich brauch das)
+# WICHTIG: Der private Schlüssel wird niemals veröffentlicht und verbleibt ausschließlich beim Maintainer.
+# LagerSync enthält lediglich den öffentlichen Schlüssel zur Signaturprüfung.
 python -c "from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey; \
 import base64; key = Ed25519PrivateKey.generate(); \
 print('Private:', base64.b64encode(key.private_bytes_raw()).decode()); \
@@ -45,7 +47,7 @@ print('Public:', base64.b64encode(key.public_key().public_bytes_raw()).decode())
 
 Ein Detail, das beim Doku-Schreiben gerne übersehen wird: Die Signatur hängt am exakten Inhalt von `plugin.json`. Schon eine Änderung am `description`-Feld eines bereits signierten Plugins macht die Signatur ungültig, bis neu signiert wird – also Vorsicht beim Nachbessern an alten, verifizierten Plugins.
 
-**Audit-Logs.** Laden/Entladen, API-Calls, DB-Zugriffe, Config-Änderungen – alles wird protokolliert, abrufbar über `GET /api/plugins/{plugin_id}/audit`.
+**Audit-Logs.** Laden/Entladen, API-Calls, DB-Zugriffe, Config-Änderungen – wichtige Aktionen werden protokolliert, abrufbar über `GET /api/plugins/{plugin_id}/audit`.
 
 **Rate Limiting**, pro Permission, damit ein einziges kaputtes Plugin nicht die ganze Instanz in die Knie zwingt:
 
