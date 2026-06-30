@@ -13,6 +13,10 @@ flowchart TD
     D --> E["Marketplace-Liste<br/>(im LagerSync-Dashboard sichtbar)"]
     E -->|"Nutzer installiert Plugin"| F["LagerSync Core"]
     F --> G[("SQLite-Datenbank")]
+    
+    D -.->|"Nach persönlicher Prüfung durch Maintainer"| H["Signieren mit privatem Ed25519-Schlüssel"]
+    H --> I["verified = true setzen"]
+    I --> E
 ```
 
 Dieses Repo ist nur der Marketplace – Quellcode plus automatisierte Checks, keine eigene Laufzeitlogik. Geladen und ausgeführt wird ein Plugin von der eigentlichen LagerSync-Anwendung, nicht von hier.
