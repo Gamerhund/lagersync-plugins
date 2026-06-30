@@ -44,13 +44,13 @@ lagersync-plugins/
 | `version` | string | – | Versionsnummer, z.B. `"1.2.0"` |
 | `author` | string | – | Name des Entwicklers |
 | `description` | string | – | Kurzbeschreibung |
-| `verified` | bool | – | Wird **ausschließlich vom Maintainer** gesetzt – niemals selbst auf `true` setzen. `false` = Plugin hat automatische Tests bestanden und ist verfügbar. `true` = Persönlich vom Maintainer geprüft (✅ Badge). |
+| `verified` | bool | – | Wird **ausschließlich vom Maintainer** gesetzt – niemals selbst auf `true` setzen. `false` = Plugin hat automatische Tests bestanden und ist verfügbar. `true` + Ed25519-Signatur = vom Maintainer geprüft (✅ Badge), Details dazu in [SECURITY.md](SECURITY.md#wie-das-plugin-system-abgesichert-ist). |
 | `enabled` | bool | – | Ob das Plugin nach der Installation sofort aktiv ist. Empfehlung: `false` (siehe unten, warum) |
 | `permissions` | array | – | Liste der benötigten Berechtigungen (siehe unten) |
 
 **Was nach der Installation passiert, hängt von `enabled` ab:**
 
-- **`enabled: false` (empfohlen):** Dashboard → Marketplace → Installieren. Danach in den Einstellungen unter Plugins auf "Plugins neu laden" – das Plugin taucht auf, aber noch inaktiv. Erst nach manuellem Aktivieren + nochmal "neu laden" + Seite neu laden (Strg+R) ist es wirklich da (z.B. im Menü sichtbar). Etwas mehr Klicks, aber man sieht bewusst, was man gerade aktiviert, bevor es lostippt.
+- **`enabled: false` (empfohlen):** Dashboard → Marketplace → Installieren. Danach in den Einstellungen unter Plugins auf "Plugins neu laden" – das Plugin taucht auf, aber noch inaktiv. Erst nach manuellem Aktivieren + nochmal "neu laden" + Seite neu laden (Strg+R) ist es wirklich da (z.B. im Menü sichtbar). Etwas mehr Klicks, aber man sieht bewusst, was man gerade aktiviert, bevor es richtig losläuft.
 - **`enabled: true`:** Nach der Installation reicht "Plugins neu laden" einmal, dann Seite neu laden – fertig, das Plugin ist sofort aktiv.
 
 Beides ist technisch gültig, `test_plugin_structure.py` prüft nur, dass das Feld überhaupt ein Boolean ist. Für neue Einreichungen ist `false` der Default, weil so niemand versehentlich sofort mit unbekanntem Code arbeitet.
