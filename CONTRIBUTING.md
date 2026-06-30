@@ -11,7 +11,7 @@ Schau in [PLUGINS.md](docs/PLUGINS.md) (oder [PLUGINS_KI.md](docs/PLUGINS_KI.md)
 1. Forken
 2. Branch: `plugin/dein-plugin-name`
 3. Ordner unter `plugins/dein-plugin-name/` anlegen – **nicht ins Repo-Root**, das wird nicht geladen (ja, das ist schon jemandem passiert)
-4. `plugin.json` mit `"verified": false` und `"enabled": false`. False ist hier die Empfehlung, nicht Pflicht – mehr dazu in [PLUGINS.md](docs/PLUGINS.md#pluginjson--pflichtdatei)
+4. `plugin.json` mit `"verified": false` und `"enabled": false`. Für neue Plugins muss `"verified": false` gesetzt sein; `"enabled": false` ist empfohlen, aber nicht zwingend. Mehr dazu in [PLUGINS.md](docs/PLUGINS.md#pluginjson--pflichtdatei)
 5. Optional: `description_en` in `plugin.json` für englische Beschreibung. **WICHTIG:** Bei bereits signierten Plugins darf `plugin.json` nicht mehr geändert werden, da jede Änderung die Signatur ungültig macht. Für verifizierte Plugins werden englische Übersetzungen direkt im `update_readme.py` Skript hinterlegt.
 6. Lokal testen: `pip install -r requirements.txt && pytest tests/ -v`
 7. PR auf `main`, kurz beschreiben was das Plugin macht und wozu die Permissions

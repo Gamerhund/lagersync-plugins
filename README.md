@@ -64,6 +64,8 @@ Der vollständige Ablauf inkl. Branch-Namen, Pflicht-Checks und Review-Kriterien
 1. [Fork dieses Repository](https://github.com/Gamerhund/lagersync-plugins/fork)
 2. Erstelle einen neuen Ordner unter `plugins/` für dein Plugin
 3. Füge deine Dateien hinzu: `plugin.json`, optional `backend.py` und `frontend.js`
+   - `plugin.json` muss die Pflichtfelder `name`, `version`, `author`, `description`, `verified`, `enabled` und `permissions` enthalten.
+   - Für neue Plugins: `verified: false`; `enabled: false` ist empfohlen.
 4. Erstelle einen **Pull Request** mit kurzer Beschreibung
 5. Nach Review und Tests erscheint dein Plugin im Marketplace
 
