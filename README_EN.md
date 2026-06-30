@@ -68,6 +68,8 @@ The full process, including branch naming, required checks, and review criteria,
 1. Fork this repository
 2. Create a new folder inside `plugins/` for your plugin
 3. Add your files (`plugin.json`, optionally `backend.py` and `frontend.js`)
+   - `plugin.json` must include the required fields `name`, `version`, `author`, `description`, `verified`, `enabled`, and `permissions`.
+   - For new plugins: `verified: false`; `enabled: false` is recommended.
 4. Create a Pull Request with a short description
 5. After review and successful testing, your plugin will be added to the marketplace
 

@@ -7,7 +7,7 @@ Fragen, die garantiert nochmal aufkommen. Wenn deine nicht dabei ist: [Issue auf
 Drei Klassiker, in der Reihenfolge, in der ich sie selbst am häufigsten verbockt habe:
 
 - Der PR ist noch nicht gemerged. Klingt offensichtlich, aber genau das ist meistens es.
-- Der Plugin-Ordner liegt nicht direkt unter `plugins/`. Wer schon mal versehentlich `plugin.json` ins Repo-Root gelegt hat (ja, ist hier schon passiert, [#10](https://github.com/Gamerhund/lagersync-plugins/pull/10)), weiß: das wird einfach nicht geladen.
+- Der Plugin-Ordner muss direkt unter `plugins/` in einem eigenen Unterordner liegen. Liegt `plugin.json` im Repo-Root oder auf der falschen Ebene, wird das Plugin nicht geladen.
 - `"enabled": false` – dann ist es zwar installiert, aber inaktiv bis du es manuell anschaltest. Das ist Absicht, kein Bug, siehe [PLUGINS.md](docs/PLUGINS.md#pluginjson--pflichtdatei).
 
 ### Der PR ist rot, was jetzt
