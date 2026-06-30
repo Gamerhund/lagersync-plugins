@@ -88,3 +88,14 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) before getting started – it cov
 This project is licensed under the MIT License.
 
 [MIT](LICENSE) © 2026 Jonas (Gamerhund)
+
+---
+
+## ☕ Support the project
+
+If this plugin marketplace or LagerSync is useful to you, your support helps me develop new features, fix bugs, and maintain the project long-term.
+
+- ☕ Ko-fi: [https://ko-fi.com/gamerhund](https://ko-fi.com/gamerhund)
+- ₿ Bitcoin: `bc1qha4h4vvykgcvzdgc5auueqhq0lf4glstrs0cy`
+
+Thank you for your support! 💚
