@@ -22,10 +22,9 @@ Official plugin marketplace for LagerSync. Extend your inventory management syst
 ## 🚀 Installation
 
 1. Open your LagerSync dashboard
-2. Navigate to **Settings → 🧩 Plugins**
-3. Click **Install Plugin**
-4. Select a plugin from the list
-5. Click **Install**
+2. Click **🧩 Marketplace** in the top navigation
+3. Find a plugin and click **"⬇ Install"**
+4. After installation: Settings → Plugins → activate the plugin → "Reload plugins" → reload the page (Ctrl+R)
 
 ---
 

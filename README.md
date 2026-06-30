@@ -22,10 +22,9 @@ Offizieller Plugin-Marktplatz für [LagerSync](https://lagersync.de). Erweitere 
 ## 🚀 Installation
 
 1. Öffne dein LagerSync-Dashboard
-2. Gehe zu **Einstellungen → 🧩 Plugins**
-3. Klicke auf „Plugin installieren"
-4. Wähle das Plugin aus der Liste
-5. Klicke auf „Installieren"
+2. Klicke oben in der Navigation auf **🧩 Marketplace**
+3. Suche dir ein Plugin aus und klicke auf **„⬇ Installieren"**
+4. Nach erfolgreicher Installation: Einstellungen → Plugins → Plugin aktivieren → „Plugins neu laden" → Seite neu laden (Strg+R)
 
 ---
 

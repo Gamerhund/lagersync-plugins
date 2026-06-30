@@ -83,16 +83,15 @@ Jede Backend-Route landet automatisch unter `/api/plugin/{ordnername}/{route}` �
 
 Zwei Kanäle, kein geteilter Zustand:
 
-- **Events** – die Hauptanwendung feuert Events (`bestand_geaendert`, `produkt_erstellt`, `produkt_geloescht`, `standort_gewechselt`), die `frontend.js` per `PluginAPI.onEvent(...)` abfangen kann. Plugins können auch eigene Events per `PluginAPI.emitEvent(...)` rauswerfen, auf die andere reagieren.
-- **HTTP über `PluginAPI.fetch()`** – für alles, was eine DB-Abfrage oder Server-Logik braucht.
+- **Events** – als Konvention vorgesehen: die Hauptanwendung soll bei bestimmten Aktionen Events feuern (`bestand_geaendert`, `produkt_erstellt`, `produkt_geloescht`, `standort_gewechselt`), die `frontend.js` per `PluginAPI.onEvent(...)` abfangen kann. **Aktuell sind diese vier noch nicht verdrahtet** – `index.html` ruft `emitEvent()` für keinen davon auf, siehe [PLUGINS.md](PLUGINS.md#geplante-events-noch-nicht-verdrahtet). Plugins können aber schon heute eigene Events per `PluginAPI.emitEvent(...)` an andere Plugins rauswerfen – das hängt nicht von der Hauptanwendung ab.
+- **HTTP über `PluginAPI.fetch()`** – für alles, was eine DB-Abfrage oder Server-Logik braucht. Funktioniert uneingeschränkt schon heute.
 
 ```mermaid
 flowchart TD
-    Main["LagerSync<br/>Hauptanwendung"] -->|"PluginAPI.emitEvent('bestand_geaendert', ...)"| P1["Plugin A<br/>frontend.js"]
-    Main -->|"gleiches Event"| P2["Plugin B<br/>frontend.js"]
-    P1 -->|"PluginAPI.emitEvent('eigenes_event', ...)"| P2
+    P1["Plugin A<br/>frontend.js"] -->|"PluginAPI.emitEvent('eigenes_event', ...)"| P2["Plugin B<br/>frontend.js"]
     P1 -->|"PluginAPI.fetch(...)"| API1["/api/plugin/plugin-a/..."]
     P2 -->|"PluginAPI.fetch(...)"| API2["/api/plugin/plugin-b/..."]
+    Main["LagerSync<br/>Hauptanwendung"] -.->|"geplant, noch nicht verdrahtet:<br/>emitEvent('bestand_geaendert', ...)"| P1
 ```
 
 Plugin A muss also nichts über Plugin B's Code wissen, um auf dessen Events zu reagieren – das hält die Dinge entkoppelt.

@@ -62,12 +62,12 @@ plugins/
   "author": "GitHub-Username",
   "description": "Was das Plugin macht (1-2 Sätze).",
   "verified": false,
-  "enabled": true,
+  "enabled": false,
   "permissions": ["inventory.read"]
 }
 ```
 
-**Alle Felder sind Pflicht** (`name`, `version`, `author`, `description`, `verified`, `enabled`). `permissions` kann leer sein `[]`.
+**Alle Felder sind Pflicht** (`name`, `version`, `author`, `description`, `verified`, `enabled`). `permissions` kann leer sein `[]`. `enabled: false` ist die Empfehlung (Details: [PLUGINS.md](PLUGINS.md#pluginjson--pflichtdatei)) – technisch ist auch `true` gültig, aber als Default für neue Einreichungen bitte `false`.
 
 ---
 
@@ -101,17 +101,19 @@ app, session, request, jsonify, ADMIN_TOKEN, os, json
 
 ## Datenbank-Schema
 
+⚠️ Drei Abweichungen vom naheliegenden Namen – falsch geraten = kaputtes SQL: `locations` hat kein `id` (PK ist `name`), `inventory` referenziert über `location` nicht `location_id`, `users` hat `role` statt `is_admin`.
+
 ### products *(inventory.read/write)*
-`id`, `name`, `barcode` (eindeutig), `short`, `min_stock`
+`id`, `name`, `barcode`, `short`, `min_stock` *(nicht vollständig – Tabelle hat noch mehr Spalten)*
 
 ### inventory *(inventory.read/write)*
-`id`, `product_id` → products, `location_id` → locations, `quantity`
+`location` (TEXT, FK → `locations.name`, **nicht** `location_id`), `product_id` → products, `quantity`. PK: `(location, product_id)`.
 
 ### locations *(inventory.read)*
-`id`, `name`
+`name` (**Primärschlüssel**, kein `id`), `color`, `is_group`
 
 ### users *(users.read/write)*
-`id`, `username` (eindeutig), `is_admin` (1/0)
+`username` (**Primärschlüssel**, kein `id`), `role` (TEXT, **kein** `is_admin`-Boolean – Admin-Check über `user_is_admin(role_oder_name)`)
 
 ### settings *(system.settings)*
 `key` (eindeutig), `value` (JSON-String oder Text)
@@ -201,13 +203,16 @@ PluginAPI.addMenuItem('Mein Plugin', '🔌', async function() {
     }
 });
 
-// Events
+// Events (Konvention vorgesehen, aber AKTUELL von der Hauptanwendung
+// noch nirgends ausgelöst - dieser onEvent-Handler registriert sich
+// folgenlos, bis index.html die passenden emitEvent()-Aufrufe bekommt.
+// Für Plugin-zu-Plugin-Events (eigene Namen) funktioniert es schon heute.)
 PluginAPI.onEvent('bestand_geaendert', ({ productKey, delta }) => {
     console.log('[mein-plugin] Bestand geändert:', productKey, delta);
 });
 ```
 
-**Verfügbare Events:** `bestand_geaendert {productKey, delta}`, `produkt_erstellt {productKey}`, `produkt_geloescht {productKey}`, `standort_gewechselt {locationId}`
+**Geplante Events (noch NICHT von der Hauptanwendung ausgelöst):** `bestand_geaendert {productKey, delta}`, `produkt_erstellt {productKey}`, `produkt_geloescht {productKey}`, `standort_gewechselt {locationId}` – verlass dich nicht darauf, bis `index.html` entsprechend ergänzt wurde. Eigene Events zwischen Plugins funktionieren dagegen schon jetzt.
 
 **Globale Funktionen (mit Guard aufrufen):**
 ```javascript
