@@ -59,7 +59,12 @@ Beides ist technisch gültig, `test_plugin_structure.py` prüft nur, dass das Fe
 
 ## Datenbank-Schema
 
-Das System verwendet **SQLite**. Folgende Tabellen stehen Plugins zur Verfügung:
+Das System verwendet **SQLite**. Die Spaltenlisten unten sind die für Plugins relevanten Felder – kein vollständiger Schema-Dump (`products` hat z.B. noch mehr Spalten wie `price`, `category`, `notes`, ...).
+
+> ⚠️ Drei Stellen weichen vom "naheliegenden" Namen ab – wer hier rät statt nachzuschauen, schreibt kaputtes SQL:
+> - `locations` hat **kein** `id`-Feld – `name` selbst ist der Primärschlüssel (TEXT)
+> - `inventory` referenziert den Lagerort über die Spalte **`location`** (TEXT, = `locations.name`), nicht `location_id`
+> - `users` hat **kein** `is_admin`-Feld, sondern **`role`** (TEXT) – Admin-Check läuft über `user_is_admin(role_oder_name)` (siehe injizierte Variablen unten), nicht über einen Boolean
 
 ### `products` *(Permission: `inventory.read` / `inventory.write`)*
 
@@ -67,7 +72,7 @@ Das System verwendet **SQLite**. Folgende Tabellen stehen Plugins zur Verfügung
 |--------|-----|--------------|
 | `id` | INTEGER | Primärschlüssel |
 | `name` | TEXT | Produktname |
-| `barcode` | TEXT | EAN/QR-Code (eindeutig) |
+| `barcode` | TEXT | EAN/QR-Code |
 | `short` | TEXT | Kurzkürzel |
 | `min_stock` | INTEGER | Mindestbestand |
 
@@ -75,23 +80,26 @@ Das System verwendet **SQLite**. Folgende Tabellen stehen Plugins zur Verfügung
 
 | Spalte | Typ | Beschreibung |
 |--------|-----|--------------|
+| `location` | TEXT | FK → `locations.name` (**nicht** `location_id`) |
 | `product_id` | INTEGER | FK → `products.id` |
-| `location_id` | INTEGER | FK → `locations.id` |
 | `quantity` | INTEGER | Aktuelle Menge |
+
+Primärschlüssel ist die Kombination `(location, product_id)`.
 
 ### `locations` *(Permission: `inventory.read`)*
 
 | Spalte | Typ | Beschreibung |
 |--------|-----|--------------|
-| `id` | INTEGER | Primärschlüssel |
-| `name` | TEXT | Name des Lagerorts |
+| `name` | TEXT | **Primärschlüssel** (kein separates `id`-Feld) |
+| `color` | TEXT | Farbe für die UI |
+| `is_group` | INTEGER | `1` = Gruppe statt einzelner Lagerort |
 
 ### `users` *(Permission: `users.read` / `users.write`)*
 
 | Spalte | Typ | Beschreibung |
 |--------|-----|--------------|
-| `username` | TEXT | Benutzername (eindeutig) |
-| `is_admin` | INTEGER | `1` = Admin, `0` = normaler Nutzer |
+| `username` | TEXT | **Primärschlüssel** (kein separates `id`-Feld) |
+| `role` | TEXT | z.B. `"admin"` – kein Boolean-Feld, siehe Hinweis oben |
 
 ### `settings` *(Permission: `system.settings`)*
 
@@ -257,16 +265,18 @@ const resp = await PluginAPI.fetch(pluginId, '/meine-route');
 const data = await resp.json();
 ```
 
-### Verfügbare Events
+### Geplante Events (noch nicht verdrahtet)
 
-| Event | Wird ausgelöst wenn | Data |
+`PluginAPI.emitEvent()`/`onEvent()` existieren bereits als Mechanismus in `index.html`. Die folgenden vier Event-Namen sind als Konvention vorgesehen, **werden aber aktuell von der Hauptanwendung selbst nirgends ausgelöst** – kein einziger der unten genannten `emitEvent()`-Aufrufe steckt heute in `index.html`. Bis das nachgezogen ist, kannst du dich nicht darauf verlassen, dass dein Plugin per `onEvent(...)` benachrichtigt wird, wenn z.B. der Bestand sich ändert.
+
+| Event (geplant) | Soll ausgelöst werden wenn | Data |
 |---|---|---|
 | `bestand_geaendert` | Bestandsmenge geändert | `{ productKey, delta }` |
 | `produkt_erstellt` | Neues Produkt angelegt | `{ productKey }` |
 | `produkt_geloescht` | Produkt gelöscht | `{ productKey }` |
 | `standort_gewechselt` | Benutzer wechselt Lagerort-Ansicht | `{ locationId }` |
 
-> **Hinweis:** Events werden über `PluginAPI.emitEvent(...)` ausgelöst. Um die Hauptanwendung anzupassen, müssen die entsprechenden Stellen in `index.html` um `PluginAPI.emitEvent(...)` Aufrufe ergänzt werden.
+**Was heute schon zuverlässig funktioniert:** eigene Events zwischen Plugins (`PluginAPI.emitEvent('mein_event', ...)` von Plugin A, `PluginAPI.onEvent('mein_event', ...)` in Plugin B) – das hängt nicht von der Hauptanwendung ab, siehe Beispiel oben. Verlass dich nur nicht auf die vier Events in der Tabelle, bis sie tatsächlich in `index.html` eingebaut sind.
 
 ### Modal erstellen
 
@@ -413,7 +423,7 @@ def gute_abfrage():
     c = conn.cursor()
     try:
         c.execute('''
-            SELECT p.*, i.quantity, i.location_id
+            SELECT p.*, i.quantity, i.location
             FROM products p
             LEFT JOIN inventory i ON p.id = i.product_id
         ''')
@@ -534,9 +544,14 @@ console.timeEnd('mein-plugin-operation');
 
 ### Plugin-Logs abrufen
 
+`logging.basicConfig(level=logging.INFO)` in `lager-server.py` schreibt ohne `filename=`-Parameter nach **stdout/stderr**, nicht in eine feste Logdatei. Wo das landet, hängt davon ab, wie der Server läuft:
+
 ```bash
-# Backend Logs
-tail -f /var/log/lagersync/plugin.log
+# Falls als systemd-Service eingerichtet:
+journalctl -u <dein-service-name> -f
+
+# Falls direkt im Terminal/Screen/tmux gestartet:
+# einfach das Terminal-Fenster anschauen, in dem `python lager-server.py` läuft
 
 # Frontend Logs (Browser Console)
 # Öffne DevTools → Console
@@ -739,10 +754,21 @@ def migrate_db(from_version, to_version):
         conn.close()
 
 # Beim Plugin-Start aufrufen
+# Hinweis: get_setting_value() ist injiziert (siehe oben), zum Schreiben gibt
+# es aber keine eigene Funktion - das macht man wie die Hauptanwendung selbst
+# auch, direkt per SQL.
 current_version = get_setting_value('mein_plugin_version') or '1.0.0'
 if current_version < '1.2.0':
     migrate_db(current_version, '1.2.0')
-    set_setting_value('mein_plugin_version', '1.2.0')
+    conn = get_db_connection()
+    try:
+        conn.execute(
+            'INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)',
+            ('mein_plugin_version', '1.2.0')
+        )
+        conn.commit()
+    finally:
+        conn.close()
 ```
 
 ---
@@ -795,11 +821,11 @@ if current_version < '1.2.0':
 ### Testing
 
 ```bash
-# Unit Tests laufen lassen
-python -m pytest tests/
+# Alle Tests laufen lassen
+pytest tests/ -v
 
-# Plugin-Tests laufen lassen
-python tests/test_plugin_structure.py dein-plugin
+# Nur eine bestimmte Test-Datei
+pytest tests/test_plugin_structure.py -v
 ```
 
 ### Deployment
