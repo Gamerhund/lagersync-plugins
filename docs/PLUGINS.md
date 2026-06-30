@@ -41,12 +41,12 @@ lagersync-plugins/
 | Feld | Typ | Pflicht | Beschreibung |
 |------|-----|---------|-------------|
 | `name` | string | ✅ | Anzeigename im Plugin-Manager |
-| `version` | string | – | Versionsnummer, z.B. `"1.2.0"` |
-| `author` | string | – | Name des Entwicklers |
-| `description` | string | – | Kurzbeschreibung |
-| `verified` | bool | – | Wird **ausschließlich vom Maintainer** gesetzt – niemals selbst auf `true` setzen. `false` = Plugin hat automatische Tests bestanden und ist verfügbar. `true` + Ed25519-Signatur = vom Maintainer geprüft (✅ Badge), Details dazu in [SECURITY.md](SECURITY.md#wie-das-plugin-system-abgesichert-ist). |
-| `enabled` | bool | – | Ob das Plugin nach der Installation sofort aktiv ist. Empfehlung: `false` (siehe unten, warum) |
-| `permissions` | array | – | Liste der benötigten Berechtigungen (siehe unten) |
+| `version` | string | ✅ | Versionsnummer, z.B. `"1.2.0"` |
+| `author` | string | ✅ | Name des Entwicklers |
+| `description` | string | ✅ | Kurzbeschreibung |
+| `verified` | bool | ✅ | Wird **ausschließlich vom Maintainer** gesetzt – niemals selbst auf `true` setzen. `false` = Plugin hat automatische Tests bestanden und ist verfügbar. `true` + Ed25519-Signatur = vom Maintainer geprüft (✅ Badge), Details dazu in [SECURITY.md](SECURITY.md#wie-das-plugin-system-abgesichert-ist). |
+| `enabled` | bool | ✅ | Ob das Plugin nach der Installation sofort aktiv ist. Empfehlung: `false` (siehe unten, warum) |
+| `permissions` | array | ✅ | Liste der benötigten Berechtigungen (siehe unten). Kann leer sein (`[]`), ist aber als Feld erforderlich. |
 
 **Was nach der Installation passiert, hängt von `enabled` ab:**
 

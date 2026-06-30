@@ -67,7 +67,7 @@ plugins/
 }
 ```
 
-**Alle Felder sind Pflicht** (`name`, `version`, `author`, `description`, `verified`, `enabled`). `permissions` kann leer sein `[]`. `enabled: false` ist die Empfehlung (Details: [PLUGINS.md](PLUGINS.md#pluginjson--pflichtdatei)) – technisch ist auch `true` gültig, aber als Default für neue Einreichungen bitte `false`.
+**Alle Felder sind Pflicht** (`name`, `version`, `author`, `description`, `verified`, `enabled`, `permissions`). `permissions` kann leer sein `[]`. `enabled: false` ist die Empfehlung (Details: [PLUGINS.md](PLUGINS.md#pluginjson--pflichtdatei)) – technisch ist auch `true` gültig, aber als Default für neue Einreichungen bitte `false`.
 
 ---
 
