@@ -52,7 +52,7 @@ Der JS-Syntax-Check braucht Node lokal installiert – ist keins da, wird er üb
 
 ### Die README zeigt plötzlich andere Texte, obwohl ich sie nicht angefasst habe
 
-Das war kein Versehen von dir. `update_readme.py` baut die Plugin-Tabelle und den "X verfügbar"-Badge automatisch aus den `plugin.json`-Dateien zusammen, jedes Mal wenn jemand nach `main` pusht. Per Hand in der Tabelle rumeditieren bringt also nichts – das überschreibt der Bot beim nächsten Lauf wieder. Beschreibung ändern willst du in der jeweiligen `plugin.json` (`description` für Deutsch, optional `description_en` für Englisch).
+Das war kein Versehen von dir. `update_readme.py` baut die Plugin-Tabelle und den "X verfügbar"-Badge automatisch aus den `plugin.json`-Dateien zusammen, jedes Mal wenn jemand nach `main` pusht. Per Hand in der Tabelle rumeditieren bringt also nichts – das überschreibt der Bot beim nächsten Lauf wieder. Beschreibung ändern willst du in der jeweiligen `plugin.json` (`description` für Deutsch, optional `description_en` für Englisch). **WICHTIG:** Bei bereits signierten Plugins darf `plugin.json` nicht mehr geändert werden, da dies die Signatur ungültig macht.
 
 ### Ich brauch Netzwerkzugriff, z.B. für einen Webhook
 
