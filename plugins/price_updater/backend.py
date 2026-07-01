@@ -2,6 +2,7 @@ from flask import Blueprint
 import requests
 from bs4 import BeautifulSoup
 import logging
+import json
 
 plugin_blueprint = Blueprint('price_updater', __name__)
 
@@ -9,7 +10,6 @@ logger = logging.getLogger('price_updater')
 
 
 def _init_tables():
-    """Erstellt die Plugin-spezifische Tabelle für URL-Mappings."""
     conn = get_db_connection()
     try:
         c = conn.cursor()
@@ -35,10 +35,6 @@ except Exception as e:
 
 
 def _extract_price_from_url(url, selector=None):
-    """
-    Extrahiert den Preis aus einer URL mittels Web Scraping.
-    Unterstützt verschiedene Selektoren für verschiedene Händler.
-    """
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
@@ -48,19 +44,16 @@ def _extract_price_from_url(url, selector=None):
         
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # Wenn ein Selektor angegeben ist, diesen verwenden
         if selector:
             element = soup.select_one(selector)
             if element:
                 price_text = element.get_text(strip=True)
                 return _parse_price(price_text)
         
-        # Amazon-Selektor
         amazon_price = soup.select_one('.a-price .a-offscreen')
         if amazon_price:
             return _parse_price(amazon_price.get_text(strip=True))
         
-        # Allgemeine Preis-Selektoren
         price_selectors = [
             '.price',
             '.product-price',
@@ -78,6 +71,25 @@ def _extract_price_from_url(url, selector=None):
                 if price > 0:
                     return price
         
+        for script in soup.find_all('script', type='application/ld+json'):
+            if script.string:
+                try:
+                    data = json.loads(script.string)
+                    json_str = json.dumps(data)
+                    if 'price' in json_str.lower():
+                        obj = data
+                        if isinstance(data, dict) and 'object' in data:
+                            obj = data['object']
+                        if isinstance(obj, dict) and 'offers' in obj:
+                            offers = obj['offers']
+                            if isinstance(offers, dict) and 'price' in offers:
+                                return float(offers['price'])
+                            elif isinstance(offers, list) and len(offers) > 0:
+                                if isinstance(offers[0], dict) and 'price' in offers[0]:
+                                    return float(offers[0]['price'])
+                except:
+                    pass
+        
         logger.warning(f'[price_updater] Kein Preis gefunden für URL: {url}')
         return None
         
@@ -87,11 +99,8 @@ def _extract_price_from_url(url, selector=None):
 
 
 def _parse_price(text):
-    """Parst einen Preis-String und gibt den numerischen Wert zurück."""
     import re
-    # Entferne alle Zeichen außer Zahlen, Komma und Punkt
     cleaned = re.sub(r'[^\d.,]', '', text)
-    # Ersetze Komma durch Punkt für Dezimalzahlen
     cleaned = cleaned.replace(',', '.')
     try:
         return float(cleaned)
@@ -102,7 +111,6 @@ def _parse_price(text):
 @plugin_blueprint.route('/urls', methods=['GET'])
 @require_auth()
 def get_urls():
-    """Gibt alle konfigurierten URLs für den aktuellen Tenant zurück."""
     tenant_id = session.get('tenant_id')
     if not tenant_id:
         return json_response({'error': 'Kein Tenant'}, 401)
@@ -129,7 +137,6 @@ def get_urls():
 @plugin_blueprint.route('/urls', methods=['POST'])
 @require_auth()
 def add_url():
-    """Fügt eine neue URL für ein Produkt hinzu."""
     tenant_id = session.get('tenant_id')
     if not tenant_id:
         return json_response({'error': 'Kein Tenant'}, 401)
@@ -145,12 +152,10 @@ def add_url():
     conn = get_db_connection()
     try:
         c = conn.cursor()
-        # Prüfen ob Produkt existiert
         c.execute('SELECT id FROM products WHERE id = ?', (product_id,))
         if not c.fetchone():
             return json_response({'error': 'Produkt nicht gefunden'}, 404)
         
-        # URL hinzufügen oder aktualisieren
         c.execute('''
             INSERT OR REPLACE INTO price_updater_urls (tenant_id, product_id, url, selector, updated)
             VALUES (?, ?, ?, ?, strftime('%s','now'))
@@ -168,7 +173,6 @@ def add_url():
 @plugin_blueprint.route('/urls/<int:url_id>', methods=['DELETE'])
 @require_auth()
 def delete_url(url_id):
-    """Löscht eine URL."""
     tenant_id = session.get('tenant_id')
     if not tenant_id:
         return json_response({'error': 'Kein Tenant'}, 401)
@@ -193,7 +197,6 @@ def delete_url(url_id):
 @plugin_blueprint.route('/update/<int:product_id>', methods=['POST'])
 @require_auth()
 def update_product_price(product_id):
-    """Aktualisiert den EK-Preis eines einzelnen Produkts."""
     tenant_id = session.get('tenant_id')
     if not tenant_id:
         return json_response({'error': 'Kein Tenant'}, 401)
@@ -201,7 +204,6 @@ def update_product_price(product_id):
     conn = get_db_connection()
     try:
         c = conn.cursor()
-        # URL für das Produkt abrufen
         c.execute('SELECT url, selector FROM price_updater_urls WHERE tenant_id = ? AND product_id = ?', (tenant_id, product_id))
         row = c.fetchone()
         
@@ -211,13 +213,11 @@ def update_product_price(product_id):
         url = row['url']
         selector = row['selector']
         
-        # Preis abrufen
         new_price = _extract_price_from_url(url, selector if selector else None)
         
         if new_price is None:
             return json_response({'error': 'Preis konnte nicht extrahiert werden'}, 400)
         
-        # Preis in der Datenbank aktualisieren
         c.execute('UPDATE products SET ek = ? WHERE id = ?', (new_price, product_id))
         conn.commit()
         
@@ -234,7 +234,6 @@ def update_product_price(product_id):
 @plugin_blueprint.route('/update-all', methods=['POST'])
 @require_auth()
 def update_all_prices():
-    """Aktualisiert alle konfigurierten Preise."""
     tenant_id = session.get('tenant_id')
     if not tenant_id:
         return json_response({'error': 'Kein Tenant'}, 401)
@@ -242,7 +241,6 @@ def update_all_prices():
     conn = get_db_connection()
     try:
         c = conn.cursor()
-        # Alle URLs für den Tenant abrufen
         c.execute('SELECT product_id, url, selector FROM price_updater_urls WHERE tenant_id = ?', (tenant_id,))
         rows = c.fetchall()
         
