@@ -39,24 +39,39 @@ except Exception as e:
 
 def _extract_price_from_json_ld(soup):
     for script in soup.find_all('script', type='application/ld+json'):
-        if script.string:
+        if not script.string:
+            continue
+        try:
+            data = json.loads(script.string)
+        except json.JSONDecodeError:
+            continue
+        
+        json_str = json.dumps(data)
+        if 'price' not in json_str.lower():
+            continue
+        
+        obj = data
+        if isinstance(data, dict) and 'object' in data:
+            obj = data['object']
+        
+        if not isinstance(obj, dict) or 'offers' not in obj:
+            continue
+        
+        offers = obj['offers']
+        if isinstance(offers, dict) and 'price' in offers:
             try:
-                data = json.loads(script.string)
-                json_str = json.dumps(data)
-                if 'price' not in json_str.lower():
-                    continue
-                obj = data
-                if isinstance(data, dict) and 'object' in data:
-                    obj = data['object']
-                if not isinstance(obj, dict) or 'offers' not in obj:
-                    continue
-                offers = obj['offers']
-                if isinstance(offers, dict) and 'price' in offers:
-                    return float(offers['price'])
-                if isinstance(offers, list) and len(offers) > 0 and isinstance(offers[0], dict) and 'price' in offers[0]:
-                    return float(offers[0]['price'])
-            except (json.JSONDecodeError, ValueError, TypeError):
+                return float(offers['price'])
+            except (ValueError, TypeError):
                 continue
+        
+        if isinstance(offers, list) and len(offers) > 0:
+            first_offer = offers[0]
+            if isinstance(first_offer, dict) and 'price' in first_offer:
+                try:
+                    return float(first_offer['price'])
+                except (ValueError, TypeError):
+                    continue
+    
     return None
 
 
