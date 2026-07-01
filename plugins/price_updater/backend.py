@@ -37,6 +37,39 @@ except Exception as e:
     print(f'[price_updater] DB-Init Fehler: {e}')
 
 
+def _extract_price_from_json_ld(soup):
+    for script in soup.find_all('script', type='application/ld+json'):
+        if script.string:
+            try:
+                data = json.loads(script.string)
+                json_str = json.dumps(data)
+                if 'price' not in json_str.lower():
+                    continue
+                obj = data
+                if isinstance(data, dict) and 'object' in data:
+                    obj = data['object']
+                if not isinstance(obj, dict) or 'offers' not in obj:
+                    continue
+                offers = obj['offers']
+                if isinstance(offers, dict) and 'price' in offers:
+                    return float(offers['price'])
+                if isinstance(offers, list) and len(offers) > 0 and isinstance(offers[0], dict) and 'price' in offers[0]:
+                    return float(offers[0]['price'])
+            except (json.JSONDecodeError, ValueError, TypeError):
+                continue
+    return None
+
+
+def _extract_price_from_selectors(soup, selectors):
+    for selector in selectors:
+        element = soup.select_one(selector)
+        if element:
+            price = _parse_price(element.get_text(strip=True))
+            if price and price > 0:
+                return price
+    return None
+
+
 def _extract_price_from_url(url, selector=None):
     try:
         headers = {
@@ -67,31 +100,13 @@ def _extract_price_from_url(url, selector=None):
             '#priceblock_dealprice'
         ]
         
-        for selector in price_selectors:
-            element = soup.select_one(selector)
-            if element:
-                price = _parse_price(element.get_text(strip=True))
-                if price > 0:
-                    return price
+        price = _extract_price_from_selectors(soup, price_selectors)
+        if price:
+            return price
         
-        for script in soup.find_all('script', type='application/ld+json'):
-            if script.string:
-                try:
-                    data = json.loads(script.string)
-                    json_str = json.dumps(data)
-                    if 'price' in json_str.lower():
-                        obj = data
-                        if isinstance(data, dict) and 'object' in data:
-                            obj = data['object']
-                        if isinstance(obj, dict) and 'offers' in obj:
-                            offers = obj['offers']
-                            if isinstance(offers, dict) and 'price' in offers:
-                                return float(offers['price'])
-                            elif isinstance(offers, list) and len(offers) > 0:
-                                if isinstance(offers[0], dict) and 'price' in offers[0]:
-                                    return float(offers[0]['price'])
-                except:
-                    pass
+        price = _extract_price_from_json_ld(soup)
+        if price:
+            return price
         
         logger.warning(f'[price_updater] Kein Preis gefunden für URL: {url}')
         return None

@@ -110,7 +110,7 @@ function openAddUrlModal() {
     m.addEventListener('click', e => { if (e.target === m) m.remove(); });
     
     m.querySelector('#pu-save').addEventListener('click', async () => {
-        const productId = parseInt(document.getElementById('pu-product-id').value);
+        const productId = Number.parseInt(document.getElementById('pu-product-id').value, 10);
         const url = document.getElementById('pu-url').value.trim();
         const selector = document.getElementById('pu-selector').value.trim();
         
