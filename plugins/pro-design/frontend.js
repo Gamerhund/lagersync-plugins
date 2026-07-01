@@ -5,6 +5,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 (function () {
+  const pluginId = 'pro-design';
   const STORAGE_KEY = 'lagersync_web_design';
   const STYLE_ID    = 'profi-design-overrides';
 

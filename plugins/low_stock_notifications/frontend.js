@@ -5,7 +5,7 @@
 (function() {
   'use strict';
 
-  const _notifyPluginId = 'low_stock_notifications';
+  const pluginId = 'low_stock_notifications';
   let _settings = null;
 
   PluginAPI.addMenuItem('Benachrichtigungen', '🔔', function() {
@@ -326,7 +326,7 @@
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
     try {
-      const resp = await PluginAPI.fetch(_notifyPluginId, '/settings', { signal: controller.signal });
+      const resp = await PluginAPI.fetch(pluginId, '/settings', { signal: controller.signal });
       if (!resp || !resp.ok) {
         throw new Error('HTTP ' + (resp ? resp.status : '0'));
       }
@@ -390,7 +390,7 @@
   window._notifyRefreshLowStock = async function() {
     const container = document.getElementById('notifyLowStockList');
     try {
-      const resp = await PluginAPI.fetch(_notifyPluginId, '/low-stock');
+      const resp = await PluginAPI.fetch(pluginId, '/low-stock');
       const data = await resp.json();
       if (data.status === 'ok') {
         if (data.low_stock.length === 0) {
@@ -435,7 +435,7 @@
     }
 
     try {
-      const resp = await PluginAPI.fetch(_notifyPluginId, '/test', {
+      const resp = await PluginAPI.fetch(pluginId, '/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -511,7 +511,7 @@
 
   async function _notifySaveToBackend(settings) {
     try {
-      const resp = await PluginAPI.fetch(_notifyPluginId, '/settings', {
+      const resp = await PluginAPI.fetch(pluginId, '/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings)
@@ -526,7 +526,7 @@
 
   window._notifyManualCheck = async function() {
     try {
-      const resp = await PluginAPI.fetch(_notifyPluginId, '/check', { method: 'POST' });
+      const resp = await PluginAPI.fetch(pluginId, '/check', { method: 'POST' });
       const data = await resp.json();
       if (data.status === 'ok') {
         if (typeof showToast === 'function') showToast('✅ Prüfung durchgeführt');
@@ -547,7 +547,7 @@
     if (!container) return;
     
     try {
-      const resp = await PluginAPI.fetch(_notifyPluginId, '/telegram/requests');
+      const resp = await PluginAPI.fetch(pluginId, '/telegram/requests');
       const data = await resp.json();
       
       if (data.status === 'ok') {
@@ -575,7 +575,7 @@
 
   window._notifyHandleTelegramRequest = async function(chatId, action) {
     try {
-      const resp = await PluginAPI.fetch(_notifyPluginId, '/telegram/requests/' + chatId, {
+      const resp = await PluginAPI.fetch(pluginId, '/telegram/requests/' + chatId, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: action })
