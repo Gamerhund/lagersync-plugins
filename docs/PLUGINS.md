@@ -242,7 +242,13 @@ def admin_bereich():
 
 Das Script wird automatisch auf jeder Seite geladen. Es läuft in einem **IIFE** (Immediately Invoked Function Expression) – Variablenname-Konflikte mit anderen Plugins sind ausgeschlossen.
 
-Die Variable `pluginId` enthält die Plugin-ID (Ordnername).
+**Wichtig:** Definiere am Anfang deiner `frontend.js` die Variable `pluginId` mit dem Plugin-Ordnernamen:
+
+```javascript
+const pluginId = 'dein-plugin-name';
+```
+
+Diese Variable wird für alle `PluginAPI.fetch()` Aufrufe benötigt.
 
 ### PluginAPI
 
