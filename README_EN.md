@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Gamerhund_lagersync-plugins&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Gamerhund_lagersync-plugins)
-[![Plugins](https://img.shields.io/badge/Plugins-4%20Available-blue.svg)](plugins/)
+[![Plugins](https://img.shields.io/badge/Plugins-5%20Available-blue.svg)](plugins/)
 
 Official plugin marketplace for LagerSync. Extend your inventory management system with verified plugins and community-created extensions – installable directly from the dashboard. | [Deutsche Version](README.md)
 
@@ -14,6 +14,7 @@ Official plugin marketplace for LagerSync. Extend your inventory management syst
 |----------|-------------|------|
 | [**ki-assistent**](plugins/ki-assistent/) | AI chat with Ollama/OpenAI integration. Can query inventory levels and perform stock changes. | ✅ Verified |
 | [**low_stock_notifications**](plugins/low_stock_notifications/) | Notifications via Telegram, Discord, Webhook, or Email. | ✅ Verified |
+| [**price_updater**](plugins/price_updater/) | Automatically updates EK prices based on configured URLs. Supports web scraping for various retailers. | 👤 Community |
 | [**pro-design**](plugins/pro-design/) | Professional design options and themes for your inventory management system. | ✅ Verified |
 | [**sso**](plugins/sso/) | Single sign-on via OpenID Connect with configurable username claim, nonce, logout, and scope, plus improved security. Works with any OIDC provider. | ✅ Verified |
 
