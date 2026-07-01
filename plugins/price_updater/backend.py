@@ -8,6 +8,9 @@ plugin_blueprint = Blueprint('price_updater', __name__)
 
 logger = logging.getLogger('price_updater')
 
+ERROR_NO_TENANT = 'Kein Tenant'
+ERROR_INTERNAL = 'Interner Fehler'
+
 
 def _init_tables():
     conn = get_db_connection()
@@ -93,8 +96,8 @@ def _extract_price_from_url(url, selector=None):
         logger.warning(f'[price_updater] Kein Preis gefunden für URL: {url}')
         return None
         
-    except Exception as e:
-        logger.error(f'[price_updater] Fehler beim Abrufen von {url}: {e}')
+    except Exception:
+        logger.exception(f'[price_updater] Fehler beim Abrufen von {url}')
         return None
 
 
@@ -113,7 +116,7 @@ def _parse_price(text):
 def get_urls():
     tenant_id = session.get('tenant_id')
     if not tenant_id:
-        return json_response({'error': 'Kein Tenant'}, 401)
+        return json_response({'error': ERROR_NO_TENANT}, 401)
     
     conn = get_db_connection()
     try:
@@ -127,9 +130,9 @@ def get_urls():
         ''', (tenant_id,))
         rows = c.fetchall()
         return json_response({'urls': [dict(r) for r in rows]})
-    except Exception as e:
-        logger.error(f'[price_updater] Fehler beim Abrufen der URLs: {e}')
-        return json_response({'error': 'Interner Fehler'}, 500)
+    except Exception:
+        logger.exception('[price_updater] Fehler beim Abrufen der URLs')
+        return json_response({'error': ERROR_INTERNAL}, 500)
     finally:
         conn.close()
 
@@ -139,7 +142,7 @@ def get_urls():
 def add_url():
     tenant_id = session.get('tenant_id')
     if not tenant_id:
-        return json_response({'error': 'Kein Tenant'}, 401)
+        return json_response({'error': ERROR_NO_TENANT}, 401)
     
     data = request.get_json(silent=True) or {}
     product_id = data.get('product_id')
@@ -163,9 +166,9 @@ def add_url():
         conn.commit()
         
         return json_response({'status': 'ok'})
-    except Exception as e:
-        logger.error(f'[price_updater] Fehler beim Hinzufügen der URL: {e}')
-        return json_response({'error': 'Interner Fehler'}, 500)
+    except Exception:
+        logger.exception('[price_updater] Fehler beim Hinzufügen der URL')
+        return json_response({'error': ERROR_INTERNAL}, 500)
     finally:
         conn.close()
 
@@ -175,7 +178,7 @@ def add_url():
 def delete_url(url_id):
     tenant_id = session.get('tenant_id')
     if not tenant_id:
-        return json_response({'error': 'Kein Tenant'}, 401)
+        return json_response({'error': ERROR_NO_TENANT}, 401)
     
     conn = get_db_connection()
     try:
@@ -187,9 +190,9 @@ def delete_url(url_id):
             return json_response({'error': 'Nicht gefunden'}, 404)
         
         return json_response({'status': 'ok'})
-    except Exception as e:
-        logger.error(f'[price_updater] Fehler beim Löschen der URL: {e}')
-        return json_response({'error': 'Interner Fehler'}, 500)
+    except Exception:
+        logger.exception('[price_updater] Fehler beim Löschen der URL')
+        return json_response({'error': ERROR_INTERNAL}, 500)
     finally:
         conn.close()
 
@@ -199,7 +202,7 @@ def delete_url(url_id):
 def update_product_price(product_id):
     tenant_id = session.get('tenant_id')
     if not tenant_id:
-        return json_response({'error': 'Kein Tenant'}, 401)
+        return json_response({'error': ERROR_NO_TENANT}, 401)
     
     conn = get_db_connection()
     try:
@@ -218,15 +221,15 @@ def update_product_price(product_id):
         if new_price is None:
             return json_response({'error': 'Preis konnte nicht extrahiert werden'}, 400)
         
-        c.execute('UPDATE products SET ek = ? WHERE id = ?', (new_price, product_id))
+        c.execute('UPDATE products SET ek = ? WHERE id = ? AND id IN (SELECT product_id FROM price_updater_urls WHERE tenant_id = ?)', (new_price, product_id, tenant_id))
         conn.commit()
         
         logger.info(f'[price_updater] Preis für Produkt {product_id} aktualisiert: {new_price}€')
         
         return json_response({'status': 'ok', 'new_price': new_price})
-    except Exception as e:
-        logger.error(f'[price_updater] Fehler beim Aktualisieren des Preises: {e}')
-        return json_response({'error': 'Interner Fehler'}, 500)
+    except Exception:
+        logger.exception('[price_updater] Fehler beim Aktualisieren des Preises')
+        return json_response({'error': ERROR_INTERNAL}, 500)
     finally:
         conn.close()
 
@@ -236,7 +239,7 @@ def update_product_price(product_id):
 def update_all_prices():
     tenant_id = session.get('tenant_id')
     if not tenant_id:
-        return json_response({'error': 'Kein Tenant'}, 401)
+        return json_response({'error': ERROR_NO_TENANT}, 401)
     
     conn = get_db_connection()
     try:
@@ -256,7 +259,7 @@ def update_all_prices():
             new_price = _extract_price_from_url(url, selector if selector else None)
             
             if new_price is not None:
-                c.execute('UPDATE products SET ek = ? WHERE id = ?', (new_price, product_id))
+                c.execute('UPDATE products SET ek = ? WHERE id = ? AND id IN (SELECT product_id FROM price_updater_urls WHERE tenant_id = ?)', (new_price, product_id, tenant_id))
                 results.append({'product_id': product_id, 'status': 'ok', 'new_price': new_price})
                 success_count += 1
             else:
@@ -272,8 +275,8 @@ def update_all_prices():
             'results': results,
             'summary': {'success': success_count, 'error': error_count}
         })
-    except Exception as e:
-        logger.error(f'[price_updater] Fehler bei Massenaktualisierung: {e}')
-        return json_response({'error': 'Interner Fehler'}, 500)
+    except Exception:
+        logger.exception('[price_updater] Fehler bei Massenaktualisierung')
+        return json_response({'error': ERROR_INTERNAL}, 500)
     finally:
         conn.close()

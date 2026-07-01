@@ -29,7 +29,7 @@ async function openPriceUpdaterModal() {
     loadUrls();
     
     m.querySelector('#pu-add-url').addEventListener('click', () => openAddUrlModal());
-    m.querySelector('#pu-update-all').addEventListener('click', () => updateAllPrices());
+    m.querySelector('#pu-update-all').addEventListener('click', (e) => updateAllPrices(e.target));
 }
 
 
@@ -62,17 +62,24 @@ async function loadUrls() {
                         <div style="font-size:0.85em;opacity:0.7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(u.url)}</div>
                         <div style="font-size:0.8em;opacity:0.6">Aktueller EK: ${u.ek || '—'}€</div>
                     </div>
-                    <button class="btn" onclick="updateSinglePrice(${u.id}, ${u.product_id})" style="background:#2196f3;padding:8px 12px;font-size:0.9em">🔄</button>
-                    <button class="btn" onclick="deleteUrl(${u.id})" style="background:#f44336;padding:8px 12px;font-size:0.9em">🗑️</button>
+                    <button class="btn pu-update-btn" data-url-id="${u.id}" data-product-id="${u.product_id}" style="background:#2196f3;padding:8px 12px;font-size:0.9em">🔄</button>
+                    <button class="btn pu-delete-btn" data-url-id="${u.id}" style="background:#f44336;padding:8px 12px;font-size:0.9em">🗑️</button>
                 </div>
             `;
         });
         html += '</div>';
         content.innerHTML = html;
         
+        content.querySelectorAll('.pu-update-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => updateSinglePrice(e.target));
+        });
+        content.querySelectorAll('.pu-delete-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => deleteUrl(e.target.dataset.urlId));
+        });
+        
     } catch (e) {
         content.innerHTML = `<div style="text-align:center;padding:20px;color:#f44336">Fehler: ${e.message}</div>`;
-        showToast && showToast('❌ URLs konnten nicht geladen werden', 'error');
+        showToast?.('❌ URLs konnten nicht geladen werden', 'error');
     }
 }
 
@@ -108,7 +115,7 @@ function openAddUrlModal() {
         const selector = document.getElementById('pu-selector').value.trim();
         
         if (!productId || !url) {
-            showToast && showToast('❌ Produkt-ID und URL sind erforderlich', 'error');
+            showToast?.('❌ Produkt-ID und URL sind erforderlich', 'error');
             return;
         }
         
@@ -122,9 +129,9 @@ function openAddUrlModal() {
             
             m.remove();
             loadUrls();
-            showToast && showToast('✅ URL hinzugefügt');
+            showToast?.('✅ URL hinzugefügt');
         } catch (e) {
-            showToast && showToast('❌ Fehler: ' + e.message, 'error');
+            showToast?.('❌ Fehler: ' + e.message, 'error');
         }
     });
 }
@@ -138,15 +145,15 @@ async function deleteUrl(urlId) {
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         
         loadUrls();
-        showToast && showToast('✅ URL gelöscht');
+        showToast?.('✅ URL gelöscht');
     } catch (e) {
-        showToast && showToast('❌ Fehler: ' + e.message, 'error');
+        showToast?.('❌ Fehler: ' + e.message, 'error');
     }
 }
 
 
-async function updateSinglePrice(urlId, productId) {
-    const btn = event.target;
+async function updateSinglePrice(btn) {
+    const productId = btn.dataset.productId;
     const originalText = btn.textContent;
     btn.textContent = '⏳';
     btn.disabled = true;
@@ -156,10 +163,10 @@ async function updateSinglePrice(urlId, productId) {
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data = await resp.json();
         
-        showToast && showToast(`✅ Preis aktualisiert: ${data.new_price}€`);
+        showToast?.(`✅ Preis aktualisiert: ${data.new_price}€`);
         loadUrls();
     } catch (e) {
-        showToast && showToast('❌ Fehler: ' + e.message, 'error');
+        showToast?.('❌ Fehler: ' + e.message, 'error');
     } finally {
         btn.textContent = originalText;
         btn.disabled = false;
@@ -167,10 +174,9 @@ async function updateSinglePrice(urlId, productId) {
 }
 
 
-async function updateAllPrices() {
+async function updateAllPrices(btn) {
     if (!confirm('Alle Preise wirklich aktualisieren?')) return;
     
-    const btn = event.target;
     const originalText = btn.textContent;
     btn.textContent = '⏳';
     btn.disabled = true;
@@ -180,10 +186,10 @@ async function updateAllPrices() {
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data = await resp.json();
         
-        showToast && showToast(`✅ ${data.summary.success} aktualisiert, ${data.summary.error} fehlerhaft`);
+        showToast?.(`✅ ${data.summary.success} aktualisiert, ${data.summary.error} fehlerhaft`);
         loadUrls();
     } catch (e) {
-        showToast && showToast('❌ Fehler: ' + e.message, 'error');
+        showToast?.('❌ Fehler: ' + e.message, 'error');
     } finally {
         btn.textContent = originalText;
         btn.disabled = false;
