@@ -31,7 +31,7 @@ und je weniger davon, desto schneller geht auch die Review.
 | `shutil.rmtree` | mittel | rekursives Löschen |
 | `open('../...')` | mittel | Pfad-Traversal |
 
-Hohe Stufe blockiert das Plugin beim Laden (Runtime-Loader), mittlere gibt nur eine Warnung.
+Hohe Stufe blockiert das Plugin beim Laden (Runtime-Loader). Mittlere Muster werden vom Produktionsscanner ebenfalls als problematisch eingestuft und sollten vermieden werden; die Tests in diesem Repository prüfen sie aktuell als Fehler.
 
 **Signaturen.** Plugins, die ich persönlich geprüft habe, signiere ich mit Ed25519 (`plugin.sig`). Die Signatur bestätigt die Integrität: exakt diese Dateien wurden seit der Signierung nicht verändert. Das "ich habe es geprüft" ergibt sich daraus, dass ich signiere. Der private Schlüssel dafür bleibt ausschließlich bei mir, LagerSync selbst enthält nur den öffentlichen Schlüssel zur Prüfung.
 

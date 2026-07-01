@@ -64,6 +64,8 @@ Der vollständige Ablauf inkl. Branch-Namen, Pflicht-Checks und Review-Kriterien
 1. [Fork dieses Repository](https://github.com/Gamerhund/lagersync-plugins/fork)
 2. Erstelle einen neuen Ordner unter `plugins/` für dein Plugin
 3. Füge deine Dateien hinzu: `plugin.json`, optional `backend.py` und `frontend.js`
+   - `plugin.json` muss die Pflichtfelder `name`, `version`, `author`, `description`, `verified`, `enabled` und `permissions` enthalten.
+   - Für neue Plugins: `verified: false`; `enabled: false` ist empfohlen.
 4. Erstelle einen **Pull Request** mit kurzer Beschreibung
 5. Nach Review und Tests erscheint dein Plugin im Marketplace
 
@@ -78,3 +80,14 @@ Contributions sind willkommen! Bitte lies [CONTRIBUTING.md](CONTRIBUTING.md) bev
 ## 📄 Lizenz
 
 [MIT](LICENSE) © 2026 Jonas (Gamerhund)
+
+---
+
+## ☕ Projekt unterstützen
+
+Wenn dir dieses Plugin-System oder LagerSync nützlich ist, würde ich mich über deine Unterstützung freuen – sie hilft mir, neue Features zu entwickeln, Bugs zu beheben und das Projekt langfristig zu pflegen.
+
+- ☕ Ko-fi: [https://ko-fi.com/gamerhund](https://ko-fi.com/gamerhund)
+- ₿ Bitcoin: `bc1qha4h4vvykgcvzdgc5auueqhq0lf4glstrs0cy`
+
+Danke für deine Unterstützung! 💚

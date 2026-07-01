@@ -68,6 +68,8 @@ The full process, including branch naming, required checks, and review criteria,
 1. Fork this repository
 2. Create a new folder inside `plugins/` for your plugin
 3. Add your files (`plugin.json`, optionally `backend.py` and `frontend.js`)
+   - `plugin.json` must include the required fields `name`, `version`, `author`, `description`, `verified`, `enabled`, and `permissions`.
+   - For new plugins: `verified: false`; `enabled: false` is recommended.
 4. Create a Pull Request with a short description
 5. After review and successful testing, your plugin will be added to the marketplace
 
@@ -86,3 +88,14 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) before getting started – it cov
 This project is licensed under the MIT License.
 
 [MIT](LICENSE) © 2026 Jonas (Gamerhund)
+
+---
+
+## ☕ Support the project
+
+If this plugin marketplace or LagerSync is useful to you, your support helps me develop new features, fix bugs, and maintain the project long-term.
+
+- ☕ Ko-fi: [https://ko-fi.com/gamerhund](https://ko-fi.com/gamerhund)
+- ₿ Bitcoin: `bc1qha4h4vvykgcvzdgc5auueqhq0lf4glstrs0cy`
+
+Thank you for your support! 💚
