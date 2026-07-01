@@ -14,7 +14,7 @@ Official plugin marketplace for LagerSync. Extend your inventory management syst
 |----------|-------------|------|
 | [**ki-assistent**](plugins/ki-assistent/) | AI chat with Ollama/OpenAI integration. Can query inventory levels and perform stock changes. | ✅ Verified |
 | [**low_stock_notifications**](plugins/low_stock_notifications/) | Notifications via Telegram, Discord, Webhook, or Email. | ✅ Verified |
-| [**price_updater**](plugins/price_updater/) | Aktualisiert EK-Preise automatisch basierend auf konfigurierten URLs. Unterstützt Web Scraping für verschiedene Händler. | 👤 Community |
+| [**price_updater**](plugins/price_updater/) | Automatically updates EK prices based on configured URLs. Supports web scraping for various retailers. | 👤 Community |
 | [**pro-design**](plugins/pro-design/) | Professional design options and themes for your inventory management system. | ✅ Verified |
 | [**sso**](plugins/sso/) | Single sign-on via OpenID Connect with configurable username claim, nonce, logout, and scope, plus improved security. Works with any OIDC provider. | ✅ Verified |
 
