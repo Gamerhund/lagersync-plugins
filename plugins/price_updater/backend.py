@@ -37,6 +37,34 @@ except Exception as e:
     print(f'[price_updater] DB-Init Fehler: {e}')
 
 
+def _try_extract_price_from_dict(offer_dict):
+    if not isinstance(offer_dict, dict) or 'price' not in offer_dict:
+        return None
+    try:
+        return float(offer_dict['price'])
+    except (ValueError, TypeError):
+        return None
+
+
+def _extract_price_from_offers(offers):
+    if isinstance(offers, dict):
+        return _try_extract_price_from_dict(offers)
+    if isinstance(offers, list) and len(offers) > 0:
+        return _try_extract_price_from_dict(offers[0])
+    return None
+
+
+def _get_offers_from_json_ld(data):
+    if not isinstance(data, dict):
+        return None
+    obj = data
+    if 'object' in data:
+        obj = data['object']
+    if not isinstance(obj, dict):
+        return None
+    return obj.get('offers')
+
+
 def _extract_price_from_json_ld(soup):
     for script in soup.find_all('script', type='application/ld+json'):
         if not script.string:
@@ -50,27 +78,13 @@ def _extract_price_from_json_ld(soup):
         if 'price' not in json_str.lower():
             continue
         
-        obj = data
-        if isinstance(data, dict) and 'object' in data:
-            obj = data['object']
-        
-        if not isinstance(obj, dict) or 'offers' not in obj:
+        offers = _get_offers_from_json_ld(data)
+        if not offers:
             continue
         
-        offers = obj['offers']
-        if isinstance(offers, dict) and 'price' in offers:
-            try:
-                return float(offers['price'])
-            except (ValueError, TypeError):
-                continue
-        
-        if isinstance(offers, list) and len(offers) > 0:
-            first_offer = offers[0]
-            if isinstance(first_offer, dict) and 'price' in first_offer:
-                try:
-                    return float(first_offer['price'])
-                except (ValueError, TypeError):
-                    continue
+        price = _extract_price_from_offers(offers)
+        if price:
+            return price
     
     return None
 
