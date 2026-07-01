@@ -1,3 +1,5 @@
+const pluginId = 'price_updater';
+
 PluginAPI.addMenuItem('Preis-Aktualisierer', '🔄', function() {
     openPriceUpdaterModal();
 });
