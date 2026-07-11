@@ -1,6 +1,3 @@
-/**
- * Lager-Benachrichtigungen - Frontend v2.1.1
- */
 
 (function() {
   'use strict';
@@ -541,7 +538,6 @@
     return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  // === Telegram Anfragen ===
   window._notifyRefreshTelegramRequests = async function() {
     const container = document.getElementById('telegramRequestsList');
     if (!container) return;
@@ -589,7 +585,6 @@
         _notifyRefreshTelegramRequests();
         
         if (action === 'accept') {
-          // Settings neu laden um neue Chat-ID anzuzeigen
           _notifyLoadSettings();
         }
       } else {

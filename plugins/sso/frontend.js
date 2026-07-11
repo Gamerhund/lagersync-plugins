@@ -1,7 +1,6 @@
 (function() {
     'use strict';
 
-    // Capture currentScript.src synchronously — it becomes null after any await
     const _scriptSrc = document.currentScript?.src;
 
     const pluginId = globalThis.pluginId ||
@@ -34,7 +33,6 @@
         }
     }
 
-    // Run at the right time — no async IIFE needed
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', _ssoInitLoginButton);
     } else {

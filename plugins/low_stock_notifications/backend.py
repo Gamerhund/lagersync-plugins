@@ -10,7 +10,6 @@ import threading
 import time as time_module
 import os
 
-# Config key constants (S1192)
 _KEY_TG_TOKEN = "telegram_token"
 _KEY_TG_CHAT = "telegram_chat_id"
 _KEY_TG_PENDING = "telegram_pending"

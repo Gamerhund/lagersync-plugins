@@ -1,17 +1,10 @@
-/* ═══════════════════════════════════════════════════════════════
-   Profi Design Plugin – frontend.js
-   Fügt unter den Menüpunkt 🎨 Design → Web Design hinzu.
-   Nutzer können zwischen Standard-Design und Profi-Design wählen.
-   ═══════════════════════════════════════════════════════════════ */
 
 (function () {
   const pluginId = 'pro-design';
   const STORAGE_KEY = 'lagersync_web_design';
   const STYLE_ID    = 'profi-design-overrides';
 
-  /* ── CSS-Overrides für das Profi-Design ───────────────────────── */
   const PROFI_CSS = `
-    /* === Profi Design: Klarer, minimaler Stil === */
 
     body.profi-design,
     html.profi-design {
@@ -26,7 +19,6 @@
       background: linear-gradient(160deg, #0d1b2a 0%, #0f2338 50%, #122840 100%) !important;
     }
 
-    /* ── Locations-Grid ── */
     body.profi-design .location-card {
       background: linear-gradient(180deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0.015) 100%) !important;
       border: 1.5px solid rgba(255,255,255,0.09) !important;
@@ -51,13 +43,11 @@
       opacity: 0.95 !important;
     }
 
-    /* ── Header ── */
     body.profi-design .header h1 {
       font-weight: 700 !important;
       letter-spacing: -0.03em !important;
     }
 
-    /* ── Produkt-Items ── */
     body.profi-design .product-item {
       background: rgba(255,255,255,0.04) !important;
       border: 1px solid rgba(255,255,255,0.08) !important;
@@ -69,14 +59,12 @@
       border-color: rgba(255,107,53,0.3) !important;
     }
 
-    /* ── Inventory-Items ── */
     body.profi-design .inventory-item {
       background: rgba(255,255,255,0.04) !important;
       border: 1px solid rgba(255,255,255,0.07) !important;
       border-radius: 10px !important;
     }
 
-    /* ── Buttons (allgemein) ── */
     body.profi-design .btn {
       background: rgba(255,255,255,0.08) !important;
       border: 1px solid rgba(255,255,255,0.12) !important;
@@ -90,13 +78,11 @@
       border-color: rgba(255,255,255,0.2) !important;
       filter: none !important;
     }
-    /* Scan-Button orange beibehalten */
     body.profi-design .btn-scan {
       background: linear-gradient(135deg, #FF6B35 0%, #FF5722 100%) !important;
       border: none !important;
     }
 
-    /* ── Modal ── */
     body.profi-design .modal-content {
       background: linear-gradient(160deg, #0f2237 0%, #0d1e30 100%) !important;
       border: 1px solid rgba(255,255,255,0.12) !important;
@@ -118,7 +104,6 @@
       box-shadow: 0 0 0 3px rgba(255,107,53,0.1) !important;
     }
 
-    /* ── Settings-Menü ── */
     body.profi-design .settings-menu {
       background: rgba(10, 25, 40, 0.97) !important;
       border: 1px solid rgba(255,255,255,0.1) !important;
@@ -135,20 +120,17 @@
       background: rgba(255,255,255,0.1) !important;
     }
 
-    /* ── Qty-Buttons ── */
     body.profi-design .qty-btn {
       border-radius: 8px !important;
       font-weight: 700 !important;
     }
 
-    /* ── Scrollbar ── */
     body.profi-design ::-webkit-scrollbar { width: 6px; }
     body.profi-design ::-webkit-scrollbar-track { background: transparent; }
     body.profi-design ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
     body.profi-design ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
   `;
 
-  /* ── Design anwenden / entfernen ─────────────────────────────── */
   function applyProfiDesign() {
     document.documentElement.classList.add('profi-design');
     document.body.classList.add('profi-design');
@@ -182,7 +164,6 @@
     return localStorage.getItem(STORAGE_KEY) || 'standard';
   }
 
-  /* ── Modal: Design-Auswahl ───────────────────────────────────── */
   function updateActiveState(mode) {
     const modal = document.getElementById('profi-design-modal');
     if (!modal) return;
@@ -313,7 +294,6 @@
       </div>
     `;
 
-    /* Klick außerhalb schließt Modal */
     modal.addEventListener('click', e => {
       if (e.target === modal) modal.style.display = 'none';
     });
@@ -322,31 +302,25 @@
     updateActiveState(getCurrentDesign());
   }
 
-  /* ── Globale Referenz für onclick-Handler im Modal ───────────── */
   window._profiDesignPlugin = {
     set: setDesign,
     open: openDesignModal,
   };
 
-  /* ── Beim Start: gespeichertes Design laden ──────────────────── */
   if (getCurrentDesign() === 'profi') {
     applyProfiDesign();
   }
 
-  /* ── Menü-Eintrag im Design-Center hinzufügen ─────────────────── */
   function addWebDesignButtonToDesignCenter() {
-    // Patch die openDesignCenter-Funktion, um den Web Design Button hinzuzufügen
     const originalOpenDesignCenter = window.openDesignCenter;
     if (originalOpenDesignCenter) {
       window.openDesignCenter = function() {
         originalOpenDesignCenter();
-        // Warte kurz bis das Modal gerendert ist
         setTimeout(() => {
           const modal = document.getElementById('designCenterModal');
           if (modal) {
             const buttonContainer = modal.querySelector('.modal-content > div[style*="display:grid"]');
             if (buttonContainer) {
-              // Prüfen ob der Button schon existiert
               if (!buttonContainer.querySelector('.profi-design-btn')) {
                 const webDesignBtn = document.createElement('button');
                 webDesignBtn.className = 'btn btn-overview profi-design-btn';
@@ -367,7 +341,6 @@
   try {
     addWebDesignButtonToDesignCenter();
   } catch (e) {
-    /* Fallback: warte bis die Seite geladen ist */
     window.addEventListener('load', () => {
       try { addWebDesignButtonToDesignCenter(); } catch (_) {}
     });
