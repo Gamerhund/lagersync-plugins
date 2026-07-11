@@ -132,15 +132,22 @@
   `;
 
   function applyProfiDesign() {
-    document.documentElement.classList.add('profi-design');
-    document.body.classList.add('profi-design');
-    let style = document.getElementById(STYLE_ID);
-    if (!style) {
-      style = document.createElement('style');
-      style.id = STYLE_ID;
-      document.head.appendChild(style);
+    const addClasses = () => {
+      document.documentElement.classList.add('profi-design');
+      document.body.classList.add('profi-design');
+      let style = document.getElementById(STYLE_ID);
+      if (!style) {
+        style = document.createElement('style');
+        style.id = STYLE_ID;
+        document.head.appendChild(style);
+      }
+      style.textContent = PROFI_CSS;
+    };
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', addClasses);
+    } else {
+      addClasses();
     }
-    style.textContent = PROFI_CSS;
   }
 
   function removeProfiDesign() {
