@@ -72,8 +72,13 @@ def load_plugin(plugin_name):
         plugin_path = get_safe_plugin_path(plugin_name)
     except ValueError as e:
         return None, str(e)
-    
-    if not os.path.exists(plugin_path):
+
+    plugins_root = os.path.abspath(os.path.realpath(PLUGINS_DIR))
+    plugin_path = os.path.abspath(os.path.realpath(plugin_path))
+    if os.path.commonpath([plugins_root, plugin_path]) != plugins_root:
+        return None, "Ungültiger Plugin-Pfad"
+
+    if not os.path.isdir(plugin_path):
         return None, "Plugin-Verzeichnis nicht gefunden"
     
     plugin_json_path = os.path.join(plugin_path, 'plugin.json')
@@ -89,7 +94,7 @@ def load_plugin(plugin_name):
     
     backend_module = None
     backend_path = os.path.join(plugin_path, 'backend.py')
-    if os.path.exists(backend_path):
+    if os.path.isfile(backend_path):
         try:
             spec = importlib.util.spec_from_file_location(f"{plugin_name}_backend", backend_path)
             backend_module = importlib.util.module_from_spec(spec)
