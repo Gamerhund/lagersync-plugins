@@ -178,21 +178,17 @@
             <p>Entwickle und teste Plugins lokal ohne die Haupt-App zu beeinflussen</p>
         </div>
 
-        <!-- Plugin-Liste -->
         <div class="section">
             <h2>Verfügbare Plugins</h2>
             <div class="plugin-list" id="plugin-list">
-                <!-- Plugins werden hier geladen -->
             </div>
         </div>
 
-        <!-- Aktive Plugin-Einstellungen -->
         <div class="section" id="settings-section" style="display:none;">
             <h2>Plugin-Einstellungen</h2>
             <div id="plugin-settings"></div>
         </div>
 
-        <!-- Test-Datenbank -->
         <div class="section">
             <h2>Test-Datenbank</h2>
             <div class="mock-data">
@@ -211,10 +207,18 @@
     <div class="notification" id="notification"></div>
 
     <script>
-        // API-Base
         const API_BASE = '';
 
-        // Notification anzeigen
+        function escapeHtml(text) {
+            if (typeof text !== 'string') text = String(text || '');
+            return text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         function showNotification(message, isError = false) {
             const notification = document.getElementById('notification');
             notification.textContent = message;
@@ -224,7 +228,6 @@
             }, 3000);
         }
 
-        // Plugins laden
         async function loadPlugins() {
             try {
                 const response = await fetch(`${API_BASE}/api/plugins`);
@@ -235,40 +238,46 @@
             }
         }
 
-        // Plugins rendern
         function renderPlugins(plugins) {
             const container = document.getElementById('plugin-list');
-            container.innerHTML = plugins.map(plugin => `
-                <div class="plugin-item">
-                    <div class="plugin-info">
-                        <h3>${plugin.config.name}</h3>
-                        <p>${plugin.config.description}</p>
-                        <p style="margin-top: 5px; font-size: 0.8rem;">
-                            Version: ${plugin.config.version} | Autor: ${plugin.config.author}
-                        </p>
+            container.innerHTML = plugins.map(plugin => {
+                const name = escapeHtml(plugin.name);
+                const configName = escapeHtml(plugin.config.name);
+                const configDesc = escapeHtml(plugin.config.description);
+                const configVer = escapeHtml(plugin.config.version);
+                const configAuthor = escapeHtml(plugin.config.author);
+                
+                return `
+                    <div class="plugin-item">
+                        <div class="plugin-info">
+                            <h3>${configName}</h3>
+                            <p>${configDesc}</p>
+                            <p style="margin-top: 5px; font-size: 0.8rem;">
+                                Version: ${configVer} | Autor: ${configAuthor}
+                            </p>
+                        </div>
+                        <div class="plugin-status">
+                            <span class="badge ${plugin.active ? 'badge-active' : 'badge-inactive'}">
+                                ${plugin.active ? '✅ Aktiv' : '⚪ Inaktiv'}
+                            </span>
+                            ${!plugin.active ? `
+                                <button class="btn btn-primary btn-activate" data-plugin-name="${name}">
+                                    Aktivieren
+                                </button>
+                            ` : `
+                                <button class="btn btn-secondary btn-settings" data-plugin-name="${name}">
+                                    Einstellungen
+                                </button>
+                                <button class="btn btn-danger btn-deactivate" data-plugin-name="${name}">
+                                    Deaktivieren
+                                </button>
+                            `}
+                        </div>
                     </div>
-                    <div class="plugin-status">
-                        <span class="badge ${plugin.active ? 'badge-active' : 'badge-inactive'}">
-                            ${plugin.active ? '✅ Aktiv' : '⚪ Inaktiv'}
-                        </span>
-                        ${!plugin.active ? `
-                            <button class="btn btn-primary" onclick="activatePlugin('${plugin.name}')">
-                                Aktivieren
-                            </button>
-                        ` : `
-                            <button class="btn btn-secondary" onclick="openSettings('${plugin.name}')">
-                                Einstellungen
-                            </button>
-                            <button class="btn btn-danger" onclick="deactivatePlugin('${plugin.name}')">
-                                Deaktivieren
-                            </button>
-                        `}
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
-        // Plugin aktivieren
         async function activatePlugin(pluginName) {
             try {
                 const response = await fetch(`${API_BASE}/api/plugins/${pluginName}/activate`, {
@@ -279,7 +288,6 @@
                 if (result.success) {
                     showNotification(result.message);
                     loadPlugins();
-                    // Einstellungen automatisch öffnen nach Aktivierung
                     setTimeout(() => openSettings(pluginName), 500);
                 } else {
                     showNotification(result.error, true);
@@ -289,7 +297,6 @@
             }
         }
 
-        // Plugin deaktivieren
         async function deactivatePlugin(pluginName) {
             try {
                 const response = await fetch(`${API_BASE}/api/plugins/${pluginName}/deactivate`, {
@@ -309,7 +316,6 @@
             }
         }
 
-        // Plugin-Einstellungen öffnen
         async function openSettings(pluginName) {
             try {
                 const response = await fetch(`${API_BASE}/api/plugins/${pluginName}/settings`);
@@ -320,23 +326,30 @@
                     const settingsContainer = document.getElementById('plugin-settings');
                     
                     settingsSection.style.display = 'block';
+                    
+                    const configName = escapeHtml(result.config.name);
+                    const configDesc = escapeHtml(result.config.description);
+                    const escapedFrontend = result.frontend ? escapeHtml(result.frontend) : '';
+                    
                     settingsContainer.innerHTML = `
-                        <h3>${result.config.name}</h3>
+                        <h3>${configName}</h3>
                         <p style="margin-bottom: 20px; color: rgba(255,255,255,0.6);">
-                            ${result.config.description}
+                            ${configDesc}
                         </p>
                         ${result.frontend ? `
                             <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px;">
                                 <h4 style="margin-bottom: 10px;">Frontend-Code:</h4>
-                                <pre style="white-space: pre-wrap; word-wrap: break-word; font-size: 0.85rem;">${escapeHtml(result.frontend)}</pre>
+                                <pre style="white-space: pre-wrap; word-wrap: break-word; font-size: 0.85rem;">${escapedFrontend}</pre>
                             </div>
                         ` : '<p>Kein Frontend-Code verfügbar</p>'}
                     `;
                     
-                    // Frontend-Code ausführen falls vorhanden
                     if (result.frontend) {
                         try {
-                            eval(result.frontend);
+                            const script = document.createElement('script');
+                            script.textContent = result.frontend;
+                            document.head.appendChild(script);
+                            document.head.removeChild(script);
                         } catch (error) {
                             console.error('Fehler beim Ausführen des Frontend-Codes:', error);
                         }
@@ -349,45 +362,59 @@
             }
         }
 
-        // Mock-Daten laden
         async function loadMockData() {
             try {
                 const response = await fetch(`${API_BASE}/api/mock-data`);
                 const data = await response.json();
                 
-                // Produkte
                 document.getElementById('mock-products').innerHTML = Object.entries(data.products)
-                    .map(([id, product]) => `
-                        <div class="data-item">
-                            <strong>${product.name}</strong><br>
-                            <small>Bestand: ${product.stock} | Min: ${product.min_stock} | Ort: ${product.location}</small>
-                        </div>
-                    `).join('');
+                    .map(([id, product]) => {
+                        const name = escapeHtml(product.name);
+                        const loc = escapeHtml(product.location);
+                        const stock = Number(product.stock);
+                        const minStock = Number(product.min_stock);
+                        return `
+                            <div class="data-item">
+                                <strong>${name}</strong><br>
+                                <small>Bestand: ${stock} | Min: ${minStock} | Ort: ${loc}</small>
+                            </div>
+                        `;
+                    }).join('');
                 
-                // Lagerorte
                 document.getElementById('mock-locations').innerHTML = Object.entries(data.locations)
-                    .map(([id, location]) => `
-                        <div class="data-item">
-                            <strong>${location.name}</strong><br>
-                            <small>Kapazität: ${location.capacity}</small>
-                        </div>
-                    `).join('');
+                    .map(([id, location]) => {
+                        const name = escapeHtml(location.name);
+                        const cap = Number(location.capacity);
+                        return `
+                            <div class="data-item">
+                                <strong>${name}</strong><br>
+                                <small>Kapazität: ${cap}</small>
+                            </div>
+                        `;
+                    }).join('');
             } catch (error) {
                 console.error('Fehler beim Laden der Mock-Daten:', error);
             }
         }
 
-        // HTML escapen
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        // Beim Start laden
         document.addEventListener('DOMContentLoaded', () => {
             loadPlugins();
             loadMockData();
+
+            document.getElementById('plugin-list').addEventListener('click', (e) => {
+                const activateBtn = e.target.closest('.btn-activate');
+                if (activateBtn) {
+                    activatePlugin(activateBtn.getAttribute('data-plugin-name'));
+                }
+                const settingsBtn = e.target.closest('.btn-settings');
+                if (settingsBtn) {
+                    openSettings(settingsBtn.getAttribute('data-plugin-name'));
+                }
+                const deactivateBtn = e.target.closest('.btn-deactivate');
+                if (deactivateBtn) {
+                    deactivatePlugin(deactivateBtn.getAttribute('data-plugin-name'));
+                }
+            });
         });
     </script>
 </body>
