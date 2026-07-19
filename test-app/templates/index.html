@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LagerSync Plugin-Test-Umgebung</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f2027 0%, #2c5364 100%);
+            color: #e8f0ec;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            padding: 40px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        .header p {
+            color: rgba(255,255,255,0.7);
+        }
+        .section {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        .section h2 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .plugin-list {
+            display: grid;
+            gap: 15px;
+        }
+        .plugin-item {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .plugin-info h3 {
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+        }
+        .plugin-info p {
+            color: rgba(255,255,255,0.6);
+            font-size: 0.9rem;
+        }
+        .plugin-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .badge-inactive {
+            background: rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.6);
+        }
+        .badge-active {
+            background: rgba(34,197,94,0.2);
+            color: #22c55e;
+            border: 1px solid rgba(34,197,94,0.3);
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #FF6B35;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #FF5722;
+        }
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        .btn-danger {
+            background: rgba(244,67,54,0.2);
+            color: #f44336;
+            border: 1px solid rgba(244,67,54,0.3);
+        }
+        .btn-danger:hover {
+            background: rgba(244,67,54,0.3);
+        }
+        .settings-panel {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+        }
+        .settings-panel.active {
+            display: block;
+        }
+        .mock-data {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .mock-data-section {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .mock-data-section h3 {
+            margin-bottom: 15px;
+        }
+        .data-item {
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .data-item:last-child {
+            margin-bottom: 0;
+        }
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            background: rgba(34,197,94,0.2);
+            border: 1px solid rgba(34,197,94,0.3);
+            color: #22c55e;
+            z-index: 1000;
+            display: none;
+        }
+        .notification.show {
+            display: block;
+        }
+        .notification.error {
+            background: rgba(244,67,54,0.2);
+            border-color: rgba(244,67,54,0.3);
+            color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧩 Plugin-Test-Umgebung</h1>
+            <p>Entwickle und teste Plugins lokal ohne die Haupt-App zu beeinflussen</p>
+        </div>
+
+        <!-- Plugin-Liste -->
+        <div class="section">
+            <h2>Verfügbare Plugins</h2>
+            <div class="plugin-list" id="plugin-list">
+                <!-- Plugins werden hier geladen -->
+            </div>
+        </div>
+
+        <!-- Aktive Plugin-Einstellungen -->
+        <div class="section" id="settings-section" style="display:none;">
+            <h2>Plugin-Einstellungen</h2>
+            <div id="plugin-settings"></div>
+        </div>
+
+        <!-- Test-Datenbank -->
+        <div class="section">
+            <h2>Test-Datenbank</h2>
+            <div class="mock-data">
+                <div class="mock-data-section">
+                    <h3>📦 Produkte</h3>
+                    <div id="mock-products"></div>
+                </div>
+                <div class="mock-data-section">
+                    <h3>📍 Lagerorte</h3>
+                    <div id="mock-locations"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <script>
+        // API-Base
+        const API_BASE = '';
+
+        // Notification anzeigen
+        function showNotification(message, isError = false) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = 'notification show' + (isError ? ' error' : '');
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // Plugins laden
+        async function loadPlugins() {
+            try {
+                const response = await fetch(`${API_BASE}/api/plugins`);
+                const plugins = await response.json();
+                renderPlugins(plugins);
+            } catch (error) {
+                showNotification('Fehler beim Laden der Plugins', true);
+            }
+        }
+
+        // Plugins rendern
+        function renderPlugins(plugins) {
+            const container = document.getElementById('plugin-list');
+            container.innerHTML = plugins.map(plugin => `
+                <div class="plugin-item">
+                    <div class="plugin-info">
+                        <h3>${plugin.config.name}</h3>
+                        <p>${plugin.config.description}</p>
+                        <p style="margin-top: 5px; font-size: 0.8rem;">
+                            Version: ${plugin.config.version} | Autor: ${plugin.config.author}
+                        </p>
+                    </div>
+                    <div class="plugin-status">
+                        <span class="badge ${plugin.active ? 'badge-active' : 'badge-inactive'}">
+                            ${plugin.active ? '✅ Aktiv' : '⚪ Inaktiv'}
+                        </span>
+                        ${!plugin.active ? `
+                            <button class="btn btn-primary" onclick="activatePlugin('${plugin.name}')">
+                                Aktivieren
+                            </button>
+                        ` : `
+                            <button class="btn btn-secondary" onclick="openSettings('${plugin.name}')">
+                                Einstellungen
+                            </button>
+                            <button class="btn btn-danger" onclick="deactivatePlugin('${plugin.name}')">
+                                Deaktivieren
+                            </button>
+                        `}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Plugin aktivieren
+        async function activatePlugin(pluginName) {
+            try {
+                const response = await fetch(`${API_BASE}/api/plugins/${pluginName}/activate`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification(result.message);
+                    loadPlugins();
+                    // Einstellungen automatisch öffnen nach Aktivierung
+                    setTimeout(() => openSettings(pluginName), 500);
+                } else {
+                    showNotification(result.error, true);
+                }
+            } catch (error) {
+                showNotification('Fehler beim Aktivieren: ' + error.message, true);
+            }
+        }
+
+        // Plugin deaktivieren
+        async function deactivatePlugin(pluginName) {
+            try {
+                const response = await fetch(`${API_BASE}/api/plugins/${pluginName}/deactivate`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification(result.message);
+                    loadPlugins();
+                    document.getElementById('settings-section').style.display = 'none';
+                } else {
+                    showNotification(result.error, true);
+                }
+            } catch (error) {
+                showNotification('Fehler beim Deaktivieren', true);
+            }
+        }
+
+        // Plugin-Einstellungen öffnen
+        async function openSettings(pluginName) {
+            try {
+                const response = await fetch(`${API_BASE}/api/plugins/${pluginName}/settings`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const settingsSection = document.getElementById('settings-section');
+                    const settingsContainer = document.getElementById('plugin-settings');
+                    
+                    settingsSection.style.display = 'block';
+                    settingsContainer.innerHTML = `
+                        <h3>${result.config.name}</h3>
+                        <p style="margin-bottom: 20px; color: rgba(255,255,255,0.6);">
+                            ${result.config.description}
+                        </p>
+                        ${result.frontend ? `
+                            <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px;">
+                                <h4 style="margin-bottom: 10px;">Frontend-Code:</h4>
+                                <pre style="white-space: pre-wrap; word-wrap: break-word; font-size: 0.85rem;">${escapeHtml(result.frontend)}</pre>
+                            </div>
+                        ` : '<p>Kein Frontend-Code verfügbar</p>'}
+                    `;
+                    
+                    // Frontend-Code ausführen falls vorhanden
+                    if (result.frontend) {
+                        try {
+                            eval(result.frontend);
+                        } catch (error) {
+                            console.error('Fehler beim Ausführen des Frontend-Codes:', error);
+                        }
+                    }
+                } else {
+                    showNotification(result.error, true);
+                }
+            } catch (error) {
+                showNotification('Fehler beim Laden der Einstellungen', true);
+            }
+        }
+
+        // Mock-Daten laden
+        async function loadMockData() {
+            try {
+                const response = await fetch(`${API_BASE}/api/mock-data`);
+                const data = await response.json();
+                
+                // Produkte
+                document.getElementById('mock-products').innerHTML = Object.entries(data.products)
+                    .map(([id, product]) => `
+                        <div class="data-item">
+                            <strong>${product.name}</strong><br>
+                            <small>Bestand: ${product.stock} | Min: ${product.min_stock} | Ort: ${product.location}</small>
+                        </div>
+                    `).join('');
+                
+                // Lagerorte
+                document.getElementById('mock-locations').innerHTML = Object.entries(data.locations)
+                    .map(([id, location]) => `
+                        <div class="data-item">
+                            <strong>${location.name}</strong><br>
+                            <small>Kapazität: ${location.capacity}</small>
+                        </div>
+                    `).join('');
+            } catch (error) {
+                console.error('Fehler beim Laden der Mock-Daten:', error);
+            }
+        }
+
+        // HTML escapen
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Beim Start laden
+        document.addEventListener('DOMContentLoaded', () => {
+            loadPlugins();
+            loadMockData();
+        });
+    </script>
+</body>
+</html>
