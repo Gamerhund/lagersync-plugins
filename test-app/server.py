@@ -47,6 +47,13 @@ def get_safe_plugin_path(plugin_name):
         raise ValueError("Ungültiger Plugin-Name")
     return candidate_path, canonical_name
 
+def get_safe_plugin_json_path(plugin_name):
+    plugin_path = get_safe_plugin_path(plugin_name)
+    plugin_json_path = os.path.abspath(os.path.realpath(os.path.join(plugin_path, 'plugin.json')))
+    if os.path.commonpath([plugin_path, plugin_json_path]) != plugin_path:
+        raise ValueError("Ungültiger Plugin-Pfad")
+    return plugin_json_path
+
 class SafeFlaskWrapper:
     def __init__(self, app, plugin_name):
         self._app = app
@@ -85,7 +92,10 @@ def load_plugin(plugin_name):
     if not os.path.isdir(plugin_path):
         return None, "Plugin-Verzeichnis nicht gefunden"
     
-    plugin_json_path = os.path.join(plugin_path, 'plugin.json')
+    try:
+        plugin_json_path = get_safe_plugin_json_path(plugin_name)
+    except ValueError:
+        return None, "Ungültiger Plugin-Pfad"
     if not os.path.exists(plugin_json_path):
         return None, "plugin.json nicht gefunden"
     
@@ -189,7 +199,10 @@ def api_activate_plugin(plugin_name):
         if plugin_name not in loaded_plugins:
             plugin_info, error = load_plugin(plugin_name)
             if error:
-                plugin_json_path = os.path.join(plugin_path, 'plugin.json')
+                try:
+                    plugin_json_path = get_safe_plugin_json_path(plugin_name)
+                except ValueError:
+                    return jsonify({'success': False, 'error': 'Konnte Plugin nicht laden'}), 400
                 if os.path.exists(plugin_json_path):
                     try:
                         with open(plugin_json_path, 'r', encoding='utf-8') as f:
