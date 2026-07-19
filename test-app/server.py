@@ -42,7 +42,10 @@ def get_safe_plugin_path(plugin_name):
     candidate_path = os.path.abspath(os.path.realpath(os.path.join(PLUGINS_DIR, plugin_name)))
     if os.path.commonpath([os.path.abspath(os.path.realpath(PLUGINS_DIR)), candidate_path]) != os.path.abspath(os.path.realpath(PLUGINS_DIR)):
         raise ValueError("Ungültiger Plugin-Name")
-    return candidate_path
+    canonical_name = os.path.basename(candidate_path)
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", canonical_name):
+        raise ValueError("Ungültiger Plugin-Name")
+    return candidate_path, canonical_name
 
 class SafeFlaskWrapper:
     def __init__(self, app, plugin_name):
@@ -69,7 +72,8 @@ class SafeFlaskWrapper:
 
 def load_plugin(plugin_name):
     try:
-        plugin_path = get_safe_plugin_path(plugin_name)
+        plugin_path, canonical_plugin_name = get_safe_plugin_path(plugin_name)
+        plugin_name = canonical_plugin_name
     except ValueError as e:
         return None, str(e)
 
@@ -159,24 +163,25 @@ def api_plugins():
 @app.route('/api/plugins/<plugin_name>/load', methods=['POST'])
 def api_load_plugin(plugin_name):
     try:
-        plugin_path = get_safe_plugin_path(plugin_name)
+        plugin_path, canonical_plugin_name = get_safe_plugin_path(plugin_name)
     except ValueError:
         return jsonify({'success': False, 'error': 'Ungültiger Plugin-Name'}), 400
         
-    if plugin_name in loaded_plugins:
+    if canonical_plugin_name in loaded_plugins:
         return jsonify({'success': True, 'message': 'Plugin bereits geladen'})
     
-    plugin_info, error = load_plugin(plugin_name)
+    plugin_info, error = load_plugin(canonical_plugin_name)
     if error:
         return jsonify({'success': False, 'error': 'Konnte Plugin nicht laden'}), 400
     
-    loaded_plugins[plugin_name] = plugin_info
-    return jsonify({'success': True, 'message': f'Plugin {plugin_name} geladen'})
+    loaded_plugins[canonical_plugin_name] = plugin_info
+    return jsonify({'success': True, 'message': f'Plugin {canonical_plugin_name} geladen'})
 
 @app.route('/api/plugins/<plugin_name>/activate', methods=['POST'])
 def api_activate_plugin(plugin_name):
     try:
-        plugin_path = get_safe_plugin_path(plugin_name)
+        plugin_path, canonical_plugin_name = get_safe_plugin_path(plugin_name)
+        plugin_name = canonical_plugin_name
     except ValueError:
         return jsonify({'success': False, 'error': 'Ungültiger Plugin-Name'}), 400
         
