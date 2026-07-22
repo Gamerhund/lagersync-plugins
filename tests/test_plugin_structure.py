@@ -25,10 +25,7 @@ def test_plugin_json_valid_json(plugin_dir):
         if plugin_path.is_dir() and not plugin_path.name.startswith("__"):
             plugin_json = plugin_path / "plugin.json"
             with open(plugin_json, 'r', encoding='utf-8') as f:
-                try:
-                    json.load(f)
-                except json.JSONDecodeError as e:
-                    pytest.fail(f"plugin.json in {plugin_path.name} ist kein gültiges JSON: {e}")
+                json.load(f)
 
 
 def test_plugin_json_required_fields(plugin_dir):

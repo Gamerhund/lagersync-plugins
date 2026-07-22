@@ -29,15 +29,7 @@ def test_python_syntax(plugin_dir):
         backend = plugin_path / "backend.py"
         if not backend.exists():
             continue
-        try:
-            py_compile.compile(str(backend), doraise=True)
-        except py_compile.PyCompileError as e:
-            pytest.fail(
-                f"\n\n"
-                f"  ❌  Syntaxfehler in '{plugin_path.name}/backend.py':\n\n"
-                f"  {e}\n\n"
-                f"  Das Plugin kann nicht geladen werden bis der Fehler behoben ist.\n"
-            )
+        py_compile.compile(str(backend), doraise=True)
 
 
 def test_javascript_syntax(plugin_dir):
