@@ -20,10 +20,7 @@ def test_backend_py_syntax_if_exists(plugin_dir):
                 with open(backend_py, 'r', encoding='utf-8') as f:
                     content = f.read()
                 
-                try:
-                    ast.parse(content)
-                except SyntaxError as e:
-                    pytest.fail(f"Plugin {plugin_path.name}: backend.py hat Syntaxfehler: {e}")
+                ast.parse(content)
 
 
 def test_backend_py_has_blueprint(plugin_dir):

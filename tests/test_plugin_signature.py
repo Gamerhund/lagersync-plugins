@@ -54,10 +54,7 @@ def test_signature_is_valid(plugin_dir, plugin_public_key):
                 signature = base64.b64decode(signature_b64)
                 
                 # Signatur verifizieren
-                try:
-                    public_key.verify(signature, plugin_json_str.encode('utf-8'))
-                except Exception as e:
-                    pytest.fail(f"Plugin {plugin_path.name}: Ungültige Signatur: {e}")
+                public_key.verify(signature, plugin_json_str.encode('utf-8'))
 
 
 def test_signature_format(plugin_dir):
@@ -71,7 +68,4 @@ def test_signature_format(plugin_dir):
                     signature_b64 = f.read()
                 
                 # Prüfen ob es gültiges base64 ist
-                try:
-                    base64.b64decode(signature_b64)
-                except Exception as e:
-                    pytest.fail(f"Plugin {plugin_path.name}: plugin.sig ist kein gültiges base64: {e}")
+                base64.b64decode(signature_b64)
