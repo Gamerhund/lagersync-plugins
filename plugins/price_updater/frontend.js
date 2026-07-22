@@ -56,27 +56,27 @@ async function loadUrls() {
         }
         
         let html = '<div style="display:grid;gap:10px">';
-        data.urls.forEach(u => {
-            const intervalLabels = {
-                manual: 'Manuell',
-                daily: 'Täglich',
-                weekly: 'Wöchentlich',
-                monthly: 'Monatlich'
-            };
-            const intervalLabel = intervalLabels[u.update_interval] || u.update_interval || 'Manuell';
-            
-            html += `
-                <div style="background:rgba(255,255,255,0.1);padding:12px;border-radius:8px;display:flex;align-items:center;gap:10px">
-                    <div style="flex:1;min-width:0">
-                        <div style="font-weight:600">${escapeHtml(u.name || 'Unbekannt')}</div>
-                        <div style="font-size:0.85em;opacity:0.7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(u.url)}</div>
-                        <div style="font-size:0.8em;opacity:0.6">Aktueller EK: ${u.ek || '—'}€ | Aktualisierung: ${intervalLabel}</div>
-                    </div>
-                    <button class="btn pu-update-btn" data-url-id="${u.id}" data-product-id="${u.product_id}" style="background:#2196f3;padding:8px 12px;font-size:0.9em">🔄</button>
-                    <button class="btn pu-delete-btn" data-url-id="${u.id}" style="background:#f44336;padding:8px 12px;font-size:0.9em">🗑️</button>
-                </div>
-            `;
-        });
+        u => {
+                    const intervalLabels = {
+                        manual: 'Manuell',
+                        daily: 'Täglich',
+                        weekly: 'Wöchentlich',
+                        monthly: 'Monatlich'
+                    };
+                    const intervalLabel = intervalLabels[u.update_interval] || 'Manuell';
+
+                    html += `
+                        <div style="background:rgba(255,255,255,0.1);padding:12px;border-radius:8px;display:flex;align-items:center;gap:10px">
+                            <div style="flex:1;min-width:0">
+                                <div style="font-weight:600">${escapeHtml(u.name || 'Unbekannt')}</div>
+                                <div style="font-size:0.85em;opacity:0.7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(u.url)}</div>
+                                <div style="font-size:0.8em;opacity:0.6">Aktueller EK: ${u.ek || '—'}€ | Aktualisierung: ${intervalLabel}</div>
+                            </div>
+                            <button class="btn pu-update-btn" data-url-id="${u.id}" data-product-id="${u.product_id}" style="background:#2196f3;padding:8px 12px;font-size:0.9em">🔄</button>
+                            <button class="btn pu-delete-btn" data-url-id="${u.id}" style="background:#f44336;padding:8px 12px;font-size:0.9em">🗑️</button>
+                        </div>
+                    `;
+                }
         html += '</div>';
         content.innerHTML = html;
         

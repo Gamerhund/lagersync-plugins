@@ -169,21 +169,22 @@ def search_products():
     tenant_id = session.get('tenant_id')
     if not tenant_id:
         return json_response({'error': ERROR_NO_TENANT}, 401)
-    
+
     query = request.args.get('q', '').strip()
     if not query or len(query) < 2:
         return json_response({'products': []})
-    
+
     conn = get_db_connection()
     try:
         c = conn.cursor()
-        c.execute('''
+        sql = '''
             SELECT id, name, ek, sku
             FROM products
             WHERE tenant_id = ? AND (name LIKE ? OR sku LIKE ?)
             ORDER BY name
             LIMIT 20
-        ''', (tenant_id, f'%{query}%', f'%{query}%'))
+        '''
+        c.execute(sql, (tenant_id, f'%{query}%', f'%{query}%'))
         rows = c.fetchall()
         return json_response({'products': [dict(r) for r in rows]})
     except Exception:
@@ -191,8 +192,6 @@ def search_products():
         return json_response({'error': ERROR_INTERNAL}, 500)
     finally:
         conn.close()
-
-
 @plugin_blueprint.route('/urls', methods=['GET'])
 @require_auth()
 def get_urls():
