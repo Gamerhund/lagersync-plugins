@@ -22,10 +22,18 @@ def _init_tables():
             product_id INTEGER NOT NULL,
             url TEXT NOT NULL,
             selector TEXT,
+            update_interval TEXT DEFAULT 'manual',
             created INTEGER DEFAULT (strftime('%s','now')),
             updated INTEGER DEFAULT (strftime('%s','now')),
             UNIQUE(tenant_id, product_id)
         )''')
+        
+        # Migration: add update_interval column if it doesn't exist
+        c.execute("PRAGMA table_info(price_updater_urls)")
+        columns = [col[1] for col in c.fetchall()]
+        if 'update_interval' not in columns:
+            c.execute("ALTER TABLE price_updater_urls ADD COLUMN update_interval TEXT DEFAULT 'manual'")
+        
         conn.commit()
     finally:
         conn.close()
@@ -155,6 +163,36 @@ def _parse_price(text):
         return None
 
 
+@plugin_blueprint.route('/search-products', methods=['GET'])
+@require_auth()
+def search_products():
+    tenant_id = session.get('tenant_id')
+    if not tenant_id:
+        return json_response({'error': ERROR_NO_TENANT}, 401)
+    
+    query = request.args.get('q', '').strip()
+    if not query or len(query) < 2:
+        return json_response({'products': []})
+    
+    conn = get_db_connection()
+    try:
+        c = conn.cursor()
+        c.execute('''
+            SELECT id, name, ek, sku
+            FROM products
+            WHERE tenant_id = ? AND (name LIKE ? OR sku LIKE ?)
+            ORDER BY name
+            LIMIT 20
+        ''', (tenant_id, f'%{query}%', f'%{query}%'))
+        rows = c.fetchall()
+        return json_response({'products': [dict(r) for r in rows]})
+    except Exception:
+        logger.exception('[price_updater] Fehler bei Produktsuche')
+        return json_response({'error': ERROR_INTERNAL}, 500)
+    finally:
+        conn.close()
+
+
 @plugin_blueprint.route('/urls', methods=['GET'])
 @require_auth()
 def get_urls():
@@ -166,7 +204,7 @@ def get_urls():
     try:
         c = conn.cursor()
         c.execute('''
-            SELECT pu.id, pu.product_id, pu.url, pu.selector, p.name, p.ek
+            SELECT pu.id, pu.product_id, pu.url, pu.selector, pu.update_interval, p.name, p.ek
             FROM price_updater_urls pu
             JOIN products p ON pu.product_id = p.id
             WHERE pu.tenant_id = ?
@@ -192,6 +230,7 @@ def add_url():
     product_id = data.get('product_id')
     url = data.get('url', '').strip()
     selector = data.get('selector', '').strip()
+    update_interval = data.get('update_interval', 'manual')
     
     if not product_id or not url:
         return json_response({'error': 'product_id und url sind erforderlich'}, 400)
@@ -204,9 +243,9 @@ def add_url():
             return json_response({'error': 'Produkt nicht gefunden'}, 404)
         
         c.execute('''
-            INSERT OR REPLACE INTO price_updater_urls (tenant_id, product_id, url, selector, updated)
-            VALUES (?, ?, ?, ?, strftime('%s','now'))
-        ''', (tenant_id, product_id, url, selector))
+            INSERT OR REPLACE INTO price_updater_urls (tenant_id, product_id, url, selector, update_interval, updated)
+            VALUES (?, ?, ?, ?, ?, strftime('%s','now'))
+        ''', (tenant_id, product_id, url, selector, update_interval))
         conn.commit()
         
         return json_response({'status': 'ok'})
