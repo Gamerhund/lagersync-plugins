@@ -28,7 +28,7 @@ def _init_tables():
             UNIQUE(tenant_id, product_id)
         )''')
         
-        # Migration: add update_interval column if it doesn't exist
+        
         c.execute("PRAGMA table_info(price_updater_urls)")
         columns = [col[1] for col in c.fetchall()]
         if 'update_interval' not in columns:
