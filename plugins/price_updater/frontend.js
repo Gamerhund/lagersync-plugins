@@ -10,18 +10,18 @@ async function openPriceUpdaterModal() {
     m.className = 'modal';
     m.style.display = 'flex';
     m.innerHTML = `
-        <div class="modal-content" style="max-width:700px;width:95vw;max-height:90vh;overflow-y:auto">
-            <h3>🔄 Preis-Aktualisierer</h3>
+        <div class="modal-content" style="max-width:700px;width:95vw;max-height:90vh;overflow-y:auto;position:relative">
+            <button onclick="this.closest('.modal').remove()" style="position:absolute;top:10px;right:10px;background:none;border:none;color:rgba(255,255,255,0.5);font-size:24px;cursor:pointer;padding:0;width:30px;height:30px;display:flex;align-items:center;justify-content:center">×</button>
+            <h3 style="margin-right:40px">🔄 Preis-Aktualisierer</h3>
             <p style="opacity:0.8;margin-bottom:15px">Verwalte URLs für automatische EK-Preis-Updates.</p>
             
             <div id="pu-content">
                 <div style="text-align:center;padding:20px">Lade...</div>
             </div>
             
-            <div style="margin-top:20px;padding-top:15px;border-top:1px solid rgba(255,255,255,0.2)">
+            <div style="margin-top:20px;padding-top:15px;border-top:1px solid rgba(255,255,255,0.2);display:flex;gap:10px;align-items:center">
                 <button class="btn" id="pu-add-url" style="background:#4caf50">➕ Neue URL hinzufügen</button>
-                <button class="btn" id="pu-update-all" style="background:#2196f3;margin-left:10px">🔄 Alle Preise aktualisieren</button>
-                <button class="btn" onclick="this.closest('.modal').remove()" style="float:right">Schließen</button>
+                <button class="btn" id="pu-update-all" style="background:#2196f3">🔄 Alle Preise aktualisieren</button>
             </div>
         </div>
     `;
@@ -56,27 +56,27 @@ async function loadUrls() {
         }
         
         let html = '<div style="display:grid;gap:10px">';
-        u => {
-                    const intervalLabels = {
-                        manual: 'Manuell',
-                        daily: 'Täglich',
-                        weekly: 'Wöchentlich',
-                        monthly: 'Monatlich'
-                    };
-                    const intervalLabel = intervalLabels[u.update_interval] || 'Manuell';
-
-                    html += `
-                        <div style="background:rgba(255,255,255,0.1);padding:12px;border-radius:8px;display:flex;align-items:center;gap:10px">
-                            <div style="flex:1;min-width:0">
-                                <div style="font-weight:600">${escapeHtml(u.name || 'Unbekannt')}</div>
-                                <div style="font-size:0.85em;opacity:0.7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(u.url)}</div>
-                                <div style="font-size:0.8em;opacity:0.6">Aktueller EK: ${u.ek || '—'}€ | Aktualisierung: ${intervalLabel}</div>
-                            </div>
-                            <button class="btn pu-update-btn" data-url-id="${u.id}" data-product-id="${u.product_id}" style="background:#2196f3;padding:8px 12px;font-size:0.9em">🔄</button>
-                            <button class="btn pu-delete-btn" data-url-id="${u.id}" style="background:#f44336;padding:8px 12px;font-size:0.9em">🗑️</button>
-                        </div>
-                    `;
-                }
+        void data.urls.forEach(u => {
+            const intervalLabels = {
+                manual: 'Manuell',
+                daily: 'Täglich',
+                weekly: 'Wöchentlich',
+                monthly: 'Monatlich'
+            };
+            const intervalLabel = intervalLabels[u.update_interval] || u.update_interval || 'Manuell';
+            
+            html += `
+                <div style="background:rgba(255,255,255,0.1);padding:12px;border-radius:8px;display:flex;align-items:center;gap:10px">
+                    <div style="flex:1;min-width:0">
+                        <div style="font-weight:600">${escapeHtml(u.name || 'Unbekannt')}</div>
+                        <div style="font-size:0.85em;opacity:0.7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(u.url)}</div>
+                        <div style="font-size:0.8em;opacity:0.6">Aktueller EK: ${u.ek || '—'}€ | Aktualisierung: ${intervalLabel}</div>
+                    </div>
+                    <button class="btn pu-update-btn" data-url-id="${u.id}" data-product-id="${u.product_id}" style="background:#2196f3;padding:8px 12px;font-size:0.9em">🔄</button>
+                    <button class="btn pu-delete-btn" data-url-id="${u.id}" style="background:#f44336;padding:8px 12px;font-size:0.9em">🗑️</button>
+                </div>
+            `;
+        });
         html += '</div>';
         content.innerHTML = html;
         
@@ -89,7 +89,7 @@ async function loadUrls() {
         
     } catch (e) {
         content.innerHTML = `<div style="text-align:center;padding:20px;color:#f44336">Fehler: ${e.message}</div>`;
-        showToast?.('❌ URLs konnten nicht geladen werden', 'error');
+        showToast('❌ URLs konnten nicht geladen werden', 'error');
     }
 }
 
@@ -99,20 +99,28 @@ function openAddUrlModal() {
     m.className = 'modal';
     m.style.display = 'flex';
     m.innerHTML = `
-        <div class="modal-content" style="max-width:500px;width:95vw">
-            <h3>➕ Neue URL hinzufügen</h3>
+        <div class="modal-content" style="max-width:500px;width:95vw;position:relative">
+            <button onclick="this.closest('.modal').remove()" style="position:absolute;top:10px;right:10px;background:none;border:none;color:rgba(255,255,255,0.5);font-size:24px;cursor:pointer;padding:0;width:30px;height:30px;display:flex;align-items:center;justify-content:center">×</button>
+            <h3 style="margin-right:40px">➕ Neue URL hinzufügen</h3>
             
-            <label style="display:block;margin-bottom:5px;font-weight:600">Produkt suchen</label>
-            <div style="display:flex;gap:10px;margin-bottom:15px">
-                <input id="pu-product-search" type="text" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.1);color:#fff" placeholder="🔍 Produktname oder SKU eingeben...">
-                <button class="btn" id="pu-search-btn" style="background:#2196f3;padding:10px 15px">🔍</button>
+            <div id="pu-product-search-section">
+                <label style="display:block;margin-bottom:5px;font-weight:600">Produkt suchen</label>
+                <div style="display:flex;gap:10px;margin-bottom:15px">
+                    <input id="pu-product-search" type="text" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.1);color:#fff" placeholder="🔍 Produktname oder SKU eingeben...">
+                    <button class="btn" id="pu-search-btn" style="background:#2196f3;padding:10px 15px">🔍</button>
+                </div>
+            </div>
+            
+            <div id="pu-product-selected-section" style="display:none;margin-bottom:15px">
+                <label style="display:block;margin-bottom:5px;font-weight:600">Ausgewähltes Produkt</label>
+                <div style="display:flex;gap:10px;align-items:center">
+                    <input id="pu-product-name" type="text" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.1);color:#fff" readonly>
+                    <button class="btn" id="pu-clear-product" style="background:#f44336;padding:10px 15px">×</button>
+                </div>
+                <input id="pu-product-id" type="hidden" value="">
             </div>
             
             <div id="pu-product-results" style="max-height:200px;overflow-y:auto;margin-bottom:15px;display:none"></div>
-            
-            <label style="display:block;margin-bottom:5px;font-weight:600">Ausgewähltes Produkt</label>
-            <input id="pu-product-name" type="text" style="width:100%;margin-bottom:5px;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.1);color:#fff" placeholder="Kein Produkt ausgewählt" readonly>
-            <input id="pu-product-id" type="hidden" value="">
             
             <label style="display:block;margin-bottom:5px;font-weight:600">URL</label>
             <input id="pu-url" type="url" style="width:100%;margin-bottom:15px;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.1);color:#fff" placeholder="https://...">
@@ -141,6 +149,9 @@ function openAddUrlModal() {
     const resultsDiv = m.querySelector('#pu-product-results');
     const productNameInput = m.querySelector('#pu-product-name');
     const productIdInput = m.querySelector('#pu-product-id');
+    const searchSection = m.querySelector('#pu-product-search-section');
+    const selectedSection = m.querySelector('#pu-product-selected-section');
+    const clearProductBtn = m.querySelector('#pu-clear-product');
     
     async function searchProducts() {
         const query = searchInput.value.trim();
@@ -183,6 +194,8 @@ function openAddUrlModal() {
                     productNameInput.value = opt.dataset.name;
                     resultsDiv.style.display = 'none';
                     searchInput.value = '';
+                    searchSection.style.display = 'none';
+                    selectedSection.style.display = 'block';
                 });
             });
         } catch (e) {
@@ -196,6 +209,13 @@ function openAddUrlModal() {
             e.preventDefault();
             searchProducts();
         }
+    });
+    
+    clearProductBtn.addEventListener('click', () => {
+        productIdInput.value = '';
+        productNameInput.value = '';
+        selectedSection.style.display = 'none';
+        searchSection.style.display = 'block';
     });
     
     m.querySelector('#pu-save').addEventListener('click', async () => {
@@ -235,9 +255,9 @@ async function deleteUrl(urlId) {
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         
         loadUrls();
-        showToast?.('✅ URL gelöscht');
+        showToast('✅ URL gelöscht');
     } catch (e) {
-        showToast?.('❌ Fehler: ' + e.message, 'error');
+        showToast('❌ Fehler: ' + e.message, 'error');
     }
 }
 
@@ -253,10 +273,10 @@ async function updateSinglePrice(btn) {
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data = await resp.json();
         
-        showToast?.(`✅ Preis aktualisiert: ${data.new_price}€`);
+        showToast(`✅ Preis aktualisiert: ${data.new_price}€`);
         loadUrls();
     } catch (e) {
-        showToast?.('❌ Fehler: ' + e.message, 'error');
+        showToast('❌ Fehler: ' + e.message, 'error');
     } finally {
         btn.textContent = originalText;
         btn.disabled = false;
@@ -276,10 +296,10 @@ async function updateAllPrices(btn) {
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data = await resp.json();
         
-        showToast?.(`✅ ${data.summary.success} aktualisiert, ${data.summary.error} fehlerhaft`);
+        showToast(`✅ ${data.summary.success} aktualisiert, ${data.summary.error} fehlerhaft`);
         loadUrls();
     } catch (e) {
-        showToast?.('❌ Fehler: ' + e.message, 'error');
+        showToast('❌ Fehler: ' + e.message, 'error');
     } finally {
         btn.textContent = originalText;
         btn.disabled = false;
