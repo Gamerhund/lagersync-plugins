@@ -348,7 +348,7 @@ def update_all_prices():
                 results.append({'product_id': product_id, 'status': 'error', 'message': 'Preis konnte nicht extrahiert werden'})
                 error_count += 1
         
-        conn.commit()
+        conn.commit() 
         
         logger.info(f'[price_updater] Massenaktualisierung: {success_count} erfolgreich, {error_count} fehlerhaft')
         
