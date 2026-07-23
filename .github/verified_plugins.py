@@ -18,4 +18,5 @@ MAINTAINER_VERIFIED_PLUGINS = frozenset([
     "low_stock_notifications",
     "pro-design",
     "sso",
+    "price_updater",
 ])
