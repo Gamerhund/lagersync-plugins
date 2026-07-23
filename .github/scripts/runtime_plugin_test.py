@@ -67,10 +67,16 @@ def test_plugin_load(plugin_name, python_version):
             conn.row_factory = sqlite3.Row
             return conn
         
+        def mock_require_auth(*args, **kwargs):
+            def decorator(f):
+                return f
+            return decorator
+        
         temp_context = {
             "db": temp_db,
             "app": type("MockApp", (), {})(),
-            "get_db_connection": mock_get_db_connection
+            "get_db_connection": mock_get_db_connection,
+            "require_auth": mock_require_auth
         }
         
         for key, value in temp_context.items():
