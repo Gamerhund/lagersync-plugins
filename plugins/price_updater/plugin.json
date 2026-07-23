@@ -4,7 +4,7 @@
   "author": "Jonas (Gamerhund)",
   "description": "Aktualisiert EK-Preise automatisch basierend auf konfigurierten URLs. Unterstützt Web Scraping für verschiedene Händler.",
   "description_en": "Automatically updates EK prices based on configured URLs. Supports web scraping for various retailers.",
-  "verified": false,
+  "verified": true,
   "enabled": false,
   "permissions": [
     "db.read",
