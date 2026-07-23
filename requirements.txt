@@ -1,4 +1,4 @@
 # Test-Abhängigkeiten für Plugin-Tests
-pytest==7.4.3
+pytest==9.1.1
 cryptography==46.0.5
 pytest-json-report==1.5.0
