@@ -17,6 +17,7 @@ jobs:
     name: Plugin Runtime Validation
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    needs: test
     strategy:
       matrix:
         python-version: ["3.11", "3.12"]
