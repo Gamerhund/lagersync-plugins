@@ -96,7 +96,9 @@ This project is licensed under the MIT License.
 
 If this plugin marketplace or LagerSync is useful to you, your support helps me develop new features, fix bugs, and maintain the project long-term.
 
+ [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/J3J11Z8R2F)
 - ☕ Ko-fi: [https://ko-fi.com/gamerhund](https://ko-fi.com/gamerhund)
 - ₿ Bitcoin: `bc1qha4h4vvykgcvzdgc5auueqhq0lf4glstrs0cy`
+
 
 Thank you for your support! 💚
