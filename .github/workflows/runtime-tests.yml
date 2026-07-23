@@ -1,0 +1,66 @@
+name: Plugin Runtime & Compatibility
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  runtime-test:
+    name: Plugin Runtime Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Abhängigkeiten installieren
+        run: pip install --prefer-binary -r requirements.txt
+
+      - name: Geänderte Plugins erkennen
+        id: detect-plugins
+        run: |
+          python3 .github/scripts/detect_changed_plugins.py > changed_plugins.txt
+          echo "plugins=$(cat changed_plugins.txt)" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Runtime Tests ausführen
+        if: steps.detect-plugins.outputs.plugins != ''
+        run: |
+          python3 .github/scripts/runtime_plugin_test.py \
+            --plugins "${{ steps.detect-plugins.outputs.plugins }}" \
+            --python-version "${{ matrix.python-version }}" \
+            --output runtime-results-${{ matrix.python-version }}.json
+
+      - name: Ergebnisse sammeln
+        if: always()
+        run: |
+          python3 .github/scripts/collect_runtime_results.py \
+            --baseline runtime-results-3.11.json \
+            --latest runtime-results-3.12.json \
+            --output final-runtime-results.json
+
+      - name: PR Kommentar posten
+        if: github.event_name == 'pull_request' && always()
+        run: python3 .github/scripts/runtime_pr_comment.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
