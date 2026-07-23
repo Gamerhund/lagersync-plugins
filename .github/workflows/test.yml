@@ -28,10 +28,7 @@ jobs:
           cache-dependency-path: requirements.txt
 
       - name: Abhängigkeiten installieren
-        run: pip install --prefer-binary -r requirements.txt
-        # SonarCloud: --prefer-binary used instead of --only-binary :all: to prevent
-        # workflow hanging when binary wheels unavailable. Packages are from PyPI
-        # and hashes are locked in requirements.txt for security.
+        run: pip install --only-binary :all: -r requirements.txt
 
       - name: Tests ausführen
         run: |
