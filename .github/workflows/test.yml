@@ -28,7 +28,7 @@ jobs:
           cache-dependency-path: requirements.txt
 
       - name: Abhängigkeiten installieren
-        run: pip install --only-binary :all: -r requirements.txt
+        run: pip install --prefer-binary -r requirements.txt
 
       - name: Tests ausführen
         run: |
