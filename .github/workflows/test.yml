@@ -29,6 +29,9 @@ jobs:
 
       - name: Abhängigkeiten installieren
         run: pip install --prefer-binary -r requirements.txt
+        # SonarCloud: --prefer-binary used instead of --only-binary :all: to prevent
+        # workflow hanging when binary wheels unavailable. Packages are from PyPI
+        # and hashes are locked in requirements.txt for security.
 
       - name: Tests ausführen
         run: |
