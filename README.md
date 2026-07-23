@@ -88,7 +88,9 @@ Contributions sind willkommen! Bitte lies [CONTRIBUTING.md](CONTRIBUTING.md) bev
 
 Wenn dir dieses Plugin-System oder LagerSync nützlich ist, würde ich mich über deine Unterstützung freuen – sie hilft mir, neue Features zu entwickeln, Bugs zu beheben und das Projekt langfristig zu pflegen.
 
+ [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/J3J11Z8R2F)
 - ☕ Ko-fi: [https://ko-fi.com/gamerhund](https://ko-fi.com/gamerhund)
 - ₿ Bitcoin: `bc1qha4h4vvykgcvzdgc5auueqhq0lf4glstrs0cy`
+
 
 Danke für deine Unterstützung! 💚
