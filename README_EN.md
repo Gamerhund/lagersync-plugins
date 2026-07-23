@@ -18,7 +18,7 @@ Official plugin marketplace for LagerSync. Extend your inventory management syst
 | [**pro-design**](plugins/pro-design/) | Professional design options and themes for your inventory management system. | ✅ Verified |
 | [**sso**](plugins/sso/) | Single sign-on via OpenID Connect with configurable username claim, nonce, logout, and scope, plus improved security. Works with any OIDC provider. | ✅ Verified |
 
---- 
+---
 
 ## 🚀 Installation
 
