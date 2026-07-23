@@ -1,0 +1,13 @@
+[
+  {
+    "plugin": "price_updater",
+    "python_version": "3.11",
+    "detection": "PASS",
+    "loading": "FAIL",
+    "initialization": "PASS",
+    "smoke_test": "PASS",
+    "errors": [
+      "Module load failed: name 'require_auth' is not defined"
+    ]
+  }
+]
