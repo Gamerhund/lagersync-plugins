@@ -119,7 +119,6 @@ def format_comment(report, categories):
 
     comment = "## 🧩 Plugin Tests – PR Review\n\n"
 
-    # Gesamtstatus
     if all_ok:
         comment += f"✅ **Alle {total} Tests bestanden** – Plugin ist marketplace-ready!\n\n"
     else:
@@ -129,7 +128,6 @@ def format_comment(report, categories):
             f"Bitte vor dem Merge beheben.\n\n"
         )
 
-    # Tabelle pro Kategorie
     comment += "### Ergebnisse nach Kategorie\n\n"
     comment += "| Kategorie | Status | Tests |\n"
     comment += "|-----------|--------|-------|\n"
