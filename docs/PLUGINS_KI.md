@@ -87,11 +87,11 @@ api.public, api.admin
 ## Injizierte Variablen in backend.py (kein Import nötig)
 
 ```python
-get_db_connection()        # SQLite-Verbindung mit row_factory
-require_auth()             # Decorator – prüft Session-Login
-json_response(obj, status) # JSON-Antwort, status optional (default 200)
-user_is_admin(name)        # True wenn Admin
-get_setting_value(key)     # Wert aus settings-Tabelle
+get_db_connection()        
+require_auth()             
+json_response(obj, status)
+user_is_admin(name)        
+get_setting_value(key)     
 app, session, request, jsonify, ADMIN_TOKEN, os, json
 ```
 
@@ -128,7 +128,6 @@ app, session, request, jsonify, ADMIN_TOKEN, os, json
 from flask import Blueprint
 plugin_blueprint = Blueprint('mein_plugin', __name__)
 
-# Eigene Tabellen anlegen
 def _init():
     conn = get_db_connection()
     c = conn.cursor()
@@ -146,7 +145,6 @@ try:
 except Exception as e:
     print(f'[mein-plugin] DB-Init Fehler: {e}')
 
-# Route mit Auth
 @plugin_blueprint.route('/daten', methods=['GET'])
 @require_auth()
 def get_daten():
@@ -159,9 +157,8 @@ def get_daten():
     except Exception as e:
         return json_response({'error': str(e)}, 500)
     finally:
-        conn.close()  # IMMER in finally!
+        conn.close()
 
-# POST-Route
 @plugin_blueprint.route('/speichern', methods=['POST'])
 @require_auth()
 def speichern():
@@ -177,8 +174,6 @@ def speichern():
 ## frontend.js – Vollständiges Beispiel
 
 ```javascript
-// pluginId = Ordnername des Plugins (automatisch verfügbar)
-
 PluginAPI.addMenuItem('Mein Plugin', '🔌', async function() {
     const m = document.createElement('div');
     m.className = 'modal';
@@ -203,10 +198,6 @@ PluginAPI.addMenuItem('Mein Plugin', '🔌', async function() {
     }
 });
 
-// Events (Konvention vorgesehen, aber AKTUELL von der Hauptanwendung
-// noch nirgends ausgelöst - dieser onEvent-Handler registriert sich
-// folgenlos, bis index.html die passenden emitEvent()-Aufrufe bekommt.
-// Für Plugin-zu-Plugin-Events (eigene Namen) funktioniert es schon heute.)
 PluginAPI.onEvent('bestand_geaendert', ({ productKey, delta }) => {
     console.log('[mein-plugin] Bestand geändert:', productKey, delta);
 });
@@ -274,7 +265,6 @@ Beispiel: Ordner `rechnungs-export`, Route `/erstellen` → `/api/plugin/rechnun
 import logging
 logger = logging.getLogger('plugin_name')
 
-# IMMER Logging verwenden
 logger.debug('Debug info')
 logger.info('Info')
 logger.warning('Warning')
@@ -284,7 +274,6 @@ logger.exception('Exception with traceback')
 
 **Frontend:**
 ```javascript
-// IMMER Plugin-Prefix in Logs
 console.log('[plugin-name] Info');
 console.warn('[plugin-name] Warning');
 console.error('[plugin-name] Error');
@@ -296,7 +285,6 @@ console.error('[plugin-name] Error');
 
 **Backend Tests:**
 ```python
-# IMMER try/finally für DB in Tests
 def setUp(self):
     self.conn = get_db_connection()
     
@@ -306,7 +294,6 @@ def tearDown(self):
 
 **Frontend Tests:**
 ```javascript
-// IMMER Guards für globale Funktionen
 showToast && showToast('Test');
 ```
 
@@ -327,7 +314,6 @@ def get_data():
     if not tenant_id:
         return json_response({'error': 'No tenant'}, 401)
     
-    # IMMER tenant_id in Query
     c.execute('SELECT * FROM table WHERE tenant_id = ?', (tenant_id,))
 ```
 
@@ -337,9 +323,8 @@ def get_data():
 
 **Backend:**
 ```python
-# IMMER spezifische Exceptions
 try:
-    # Code
+    pass
 except ValueError as e:
     return json_response({'error': 'Invalid input', 'details': str(e)}, 400)
 except PermissionError:
@@ -351,7 +336,6 @@ except Exception as e:
 
 **Frontend:**
 ```javascript
-// IMMER try/catch für async
 try {
     const resp = await PluginAPI.fetch(pluginId, '/route');
     const data = await resp.json();
