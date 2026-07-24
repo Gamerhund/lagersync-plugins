@@ -15,7 +15,6 @@ def collect_results(baseline_file, latest_file, baseline_version, latest_version
         with open(latest_file) as f:
             latest_results = json.load(f)
     
-    # Count PASS results based on overall status
     baseline_pass = sum(1 for r in baseline_results if r.get("overall") == "PASS")
     latest_pass = sum(1 for r in latest_results if r.get("overall") == "PASS")
     

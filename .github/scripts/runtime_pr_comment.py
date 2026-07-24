@@ -115,7 +115,6 @@ def generate_pr_comment(results_file):
         
         comment += f"━━━━━━━━━━━━━━━━━━━━\n\n"
     
-    # Overall summary
     comment += f"🐍 Python Compatibility\n\n"
     
     comment += f"Python {summary.get('baseline_version', '3.11')} — Baseline\n"
