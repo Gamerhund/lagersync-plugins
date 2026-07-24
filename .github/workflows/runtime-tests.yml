@@ -39,7 +39,6 @@ jobs:
         run: |
           python3 .github/scripts/detect_changed_plugins.py > changed_plugins.txt
           echo "plugins=$(cat changed_plugins.txt)" >> $GITHUB_OUTPUT
-        continue-on-error: true
 
       - name: Runtime Tests ausführen
         if: steps.detect-plugins.outputs.plugins != ''
@@ -55,6 +54,8 @@ jobs:
           python3 .github/scripts/collect_runtime_results.py \
             --baseline runtime-results-3.11.json \
             --latest runtime-results-3.12.json \
+            --baseline-version "3.11" \
+            --latest-version "3.12" \
             --output final-runtime-results.json
 
       - name: PR Kommentar posten
@@ -64,3 +65,19 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+
+      - name: Test-Artefakte hochladen
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-results-${{ matrix.python-version }}
+          path: runtime-results-${{ matrix.python-version }}.json
+          retention-days: 7
+
+      - name: Final-Artefakt hochladen
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-runtime-results
+          path: final-runtime-results.json
+          retention-days: 7
