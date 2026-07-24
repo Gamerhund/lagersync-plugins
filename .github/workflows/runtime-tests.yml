@@ -48,6 +48,11 @@ jobs:
             --python-version "${{ matrix.python-version }}" \
             --output runtime-results-${{ matrix.python-version }}.json
 
+      - name: Leere Ergebnisse erstellen
+        if: steps.detect-plugins.outputs.plugins == ''
+        run: |
+          echo '[]' > runtime-results-${{ matrix.python-version }}.json
+
       - name: Ergebnisse sammeln
         if: always()
         run: |
