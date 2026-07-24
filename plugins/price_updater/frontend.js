@@ -4,7 +4,7 @@ PluginAPI.addMenuItem('Preis-Aktualisierer', '🔄', function() {
     openPriceUpdaterModal();
 });
 
-
+ 
 async function openPriceUpdaterModal() {
     const m = document.createElement('div');
     m.className = 'modal';
