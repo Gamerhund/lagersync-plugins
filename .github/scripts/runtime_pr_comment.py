@@ -6,6 +6,23 @@ from pathlib import Path
 
 COMMENT_MARKER = "<!-- plugin-runtime-validation -->"
 
+
+def _format_details(details, indent="   ", _depth=0):
+    if not isinstance(details, dict) or not details:
+        return ""
+    lines = []
+    for key, value in details.items():
+        if key == "actual" and isinstance(value, (dict, list)):
+            lines.append(f"{indent}{key}: {json.dumps(value, ensure_ascii=False)[:200]}")
+        elif isinstance(value, dict):
+            lines.append(f"{indent}{key}:")
+            lines.append(_format_details(value, indent=indent + "   ", _depth=_depth + 1).rstrip("\n"))
+        elif isinstance(value, list):
+            lines.append(f"{indent}{key}: {', '.join(str(v) for v in value)}")
+        else:
+            lines.append(f"{indent}{key}: {value}")
+    return "\n".join(lines) + "\n"
+
 def generate_pr_comment(results_file):
     if not Path(results_file).exists():
         return "ℹ️ No runtime results available."
@@ -125,20 +142,7 @@ def generate_pr_comment(results_file):
         if smoke_test == "PASS":
             comment += f"✅ Real functionality executed\n"
             smoke_details = result.get("details", {}).get("smoke_test", {})
-            if smoke_details:
-                operation = smoke_details.get("operation", "unknown")
-                comment += f"   Operation: {operation}\n"
-                if "expected_price" in smoke_details:
-                    comment += f"   Expected: {smoke_details['expected_price']}\n"
-                    comment += f"   Actual: {smoke_details['actual_price']}\n"
-                if "search_term" in smoke_details:
-                    comment += f"   Search: {smoke_details['search_term']}\n"
-                    comment += f"   Found: {smoke_details['found_products']} product(s)\n"
-                if "found_items" in smoke_details:
-                    comment += f"   Found items: {smoke_details['found_items']}\n"
-                if "issuer" in smoke_details:
-                    comment += f"   Issuer: {smoke_details['issuer']}\n"
-                    comment += f"   Discovery: {smoke_details['discovery_successful']}\n"
+            comment += _format_details(smoke_details, indent="   ")
         elif smoke_test == "SKIP":
             comment += f"⏭️ SKIP\n"
             reason = result.get("skip_reasons", {}).get("smoke_test", "")

@@ -24,6 +24,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v7
         with:
@@ -34,8 +36,27 @@ jobs:
       - name: Abhängigkeiten installieren
         run: pip install --prefer-binary -r requirements.txt
 
+      - name: Basis-/Head-SHA bestimmen
+        id: diff-shas
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "head_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            BEFORE="${{ github.event.before }}"
+            if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+              echo "base_sha=4b825dc642cb6eb9a060e54bf8d69288fbee4904" >> "$GITHUB_OUTPUT"
+            else
+              echo "base_sha=$BEFORE" >> "$GITHUB_OUTPUT"
+            fi
+            echo "head_sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Geänderte Plugins erkennen
         id: detect-plugins
+        env:
+          BASE_SHA: ${{ steps.diff-shas.outputs.base_sha }}
+          HEAD_SHA: ${{ steps.diff-shas.outputs.head_sha }}
         run: |
           python3 .github/scripts/detect_changed_plugins.py > changed_plugins.txt
           echo "plugins=$(cat changed_plugins.txt)" >> $GITHUB_OUTPUT

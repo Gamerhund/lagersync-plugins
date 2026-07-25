@@ -18,6 +18,43 @@ except ImportError:
 PLUGINS_DIR = Path("plugins")
 TEST_MODE = os.environ.get("LAGERSYNC_TEST_MODE", "false") == "true"
 
+
+def create_test_tables(cursor):
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS products (
+            id INTEGER PRIMARY KEY,
+            name TEXT,
+            sku TEXT,
+            short TEXT,
+            barcode TEXT,
+            price REAL,
+            ek REAL,
+            min_stock INTEGER DEFAULT 5
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS inventory (
+            id INTEGER PRIMARY KEY,
+            product_id INTEGER,
+            quantity INTEGER,
+            location TEXT
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS locations (
+            id INTEGER PRIMARY KEY,
+            name TEXT
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY,
+            username TEXT,
+            is_admin INTEGER
+        )
+    """)
+
+
 def get_db_snapshot(conn):
     cursor = conn.cursor()
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
@@ -154,37 +191,7 @@ def test_plugin_runtime(plugin_name, python_version):
         
         # Create common tables that plugins might need
         cursor = test_db.cursor()
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS products (
-                id INTEGER PRIMARY KEY,
-                name TEXT,
-                sku TEXT,
-                price REAL,
-                min_stock INTEGER DEFAULT 5,
-                short TEXT
-            )
-        """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS inventory (
-                id INTEGER PRIMARY KEY,
-                product_id INTEGER,
-                quantity INTEGER,
-                location_id INTEGER
-            )
-        """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS locations (
-                id INTEGER PRIMARY KEY,
-                name TEXT
-            )
-        """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY,
-                username TEXT,
-                is_admin INTEGER
-            )
-        """)
+        create_test_tables(cursor)
         test_db.commit()
         
         # Create a wrapper that prevents closing
@@ -328,37 +335,7 @@ def test_plugin_runtime(plugin_name, python_version):
             test_db.row_factory = sqlite3.Row
             # Recreate common tables
             cursor = test_db.cursor()
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS products (
-                    id INTEGER PRIMARY KEY,
-                    name TEXT,
-                    sku TEXT,
-                    price REAL,
-                    min_stock INTEGER DEFAULT 5,
-                    short TEXT
-                )
-            """)
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS inventory (
-                    id INTEGER PRIMARY KEY,
-                    product_id INTEGER,
-                    quantity INTEGER,
-                    location_id INTEGER
-                )
-            """)
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS locations (
-                    id INTEGER PRIMARY KEY,
-                    name TEXT
-                )
-            """)
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS users (
-                    id INTEGER PRIMARY KEY,
-                    username TEXT,
-                    is_admin INTEGER
-                )
-            """)
+            create_test_tables(cursor)
             test_db.commit()
         
         # Database initialization - check tables created by plugin
@@ -389,14 +366,6 @@ def test_plugin_runtime(plugin_name, python_version):
             bp = module.plugin_blueprint
             mock_app.register_blueprint(bp, url_prefix=f"/api/plugin/{plugin_name}")
             results["registration"] = "PASS"
-            
-            discovered_routes = []
-            if hasattr(bp, 'deferred_functions'):
-                for func in bp.deferred_functions:
-                    try:
-                        func(mock_app)
-                    except:
-                        pass
             
             if mock_app.routes:
                 discovered_routes = [r["rule"] for r in mock_app.routes]
@@ -487,7 +456,7 @@ def run_plugin_specific_smoke_test(plugin_name, module, test_db, external_mocks,
         "error_handling": "SKIP",
         "authentication_test": "SKIP",
         "details": results.get("details", {}),
-        "skip_reasons": {}
+        "skip_reasons": results.get("skip_reasons", {})
     }
     
     # Take DB snapshot before smoke test
@@ -499,36 +468,7 @@ def run_plugin_specific_smoke_test(plugin_name, module, test_db, external_mocks,
         test_db.row_factory = sqlite3.Row
         # Recreate common tables
         cursor = test_db.cursor()
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS products (
-                id INTEGER PRIMARY KEY,
-                name TEXT,
-                sku TEXT,
-                price REAL,
-                min_stock INTEGER DEFAULT 5
-            )
-        """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS inventory (
-                id INTEGER PRIMARY KEY,
-                product_id INTEGER,
-                quantity INTEGER,
-                location_id INTEGER
-            )
-        """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS locations (
-                id INTEGER PRIMARY KEY,
-                name TEXT
-            )
-        """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY,
-                username TEXT,
-                is_admin INTEGER
-            )
-        """)
+        create_test_tables(cursor)
         test_db.commit()
     
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
@@ -543,22 +483,34 @@ def run_plugin_specific_smoke_test(plugin_name, module, test_db, external_mocks,
     
     try:
         if plugin_name == "price_updater":
-            smoke_results.update(_test_price_updater(module, test_db, external_mocks))
+            plugin_result = _test_price_updater(module, test_db, external_mocks)
         elif plugin_name == "ki-assistent":
-            smoke_results.update(_test_ki_assistent(module, test_db, external_mocks))
+            plugin_result = _test_ki_assistent(module, test_db, external_mocks)
         elif plugin_name == "low_stock_notifications":
-            smoke_results.update(_test_low_stock_notifications(module, test_db, external_mocks))
+            plugin_result = _test_low_stock_notifications(module, test_db, external_mocks)
         elif plugin_name == "sso":
-            smoke_results.update(_test_sso(module, test_db, external_mocks))
+            plugin_result = _test_sso(module, test_db, external_mocks)
         else:
-            smoke_results["smoke_test"] = "NOT_APPLICABLE"
-            smoke_results["skip_reasons"] = {"smoke_test": f"No specific smoke test for plugin: {plugin_name}"}
+            plugin_result = {
+                "smoke_test": "NOT_APPLICABLE",
+                "skip_reasons": {"smoke_test": f"No specific smoke test for plugin: {plugin_name}"}
+            }
+        
+        plugin_details = plugin_result.pop("details", {})
+        plugin_skip_reasons = plugin_result.pop("skip_reasons", {})
+        plugin_errors = plugin_result.pop("errors", [])
+        
+        smoke_results.update(plugin_result)
+        smoke_results["details"].update(plugin_details)
+        smoke_results["skip_reasons"].update(plugin_skip_reasons)
+        smoke_results["errors"] = smoke_results.get("errors", []) + plugin_errors
     except Exception as e:
         smoke_results["smoke_test"] = "FAIL"
         smoke_results["errors"] = smoke_results.get("errors", [])
         smoke_results["errors"].append(f"Plugin-specific smoke test failed: {e}")
     
     # Take DB snapshot after smoke test
+
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
     tables_after = [row[0] for row in cursor.fetchall()]
     
@@ -602,48 +554,34 @@ def _test_price_updater(module, test_db, external_mocks):
         "side_effects": "SKIP",
         "error_handling": "SKIP",
         "authentication_test": "SKIP",
-        "details": {}
+        "details": {},
+        "errors": [],
+        "skip_reasons": {}
     }
     
     try:
         cursor = test_db.cursor()
         
-        # Create products table if it doesn't exist
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS products (
-                id INTEGER PRIMARY KEY,
-                name TEXT,
-                price REAL,
-                sku TEXT
-            )
-        """)
-        
-        # Insert test product with initial price
-        cursor.execute("""
-            INSERT INTO products (id, name, price, sku)
-            VALUES (1, 'Test Product', 10.00, 'TEST-001')
+            INSERT INTO products (id, name, ek, sku) VALUES (1, 'Test Product', 10.00, 'TEST-001')
         """)
         test_db.commit()
         
-        # Configure realistic HTML mock response
         mock_html = '<html><body><span class="price">19.99</span></body></html>'
         external_mocks["requests"].get.return_value.text = mock_html
         external_mocks["requests"].get.return_value.content = mock_html.encode()
         external_mocks["requests"].get.return_value.status_code = 200
         
-        # Configure BeautifulSoup mock to return price element
         mock_soup = MagicMock()
         mock_price_element = MagicMock()
         mock_price_element.get_text.return_value = "19.99"
         mock_soup.select_one.return_value = mock_price_element
         external_mocks["bs4"].BeautifulSoup.return_value = mock_soup
         
-        # Test _extract_price_from_url with actual call
         if hasattr(module, '_extract_price_from_url'):
             extracted_price = module._extract_price_from_url('http://test.example')
             
             if extracted_price == 19.99:
-                # Verify that the mock was actually used
                 if external_mocks["requests"].get.called:
                     results["smoke_test"] = "PASS"
                     results["details"]["smoke_test"] = {
@@ -651,24 +589,30 @@ def _test_price_updater(module, test_db, external_mocks):
                         "test_url": "http://test.example",
                         "expected_price": 19.99,
                         "actual_price": extracted_price,
-                        "mock_used": external_mocks["requests"].get.called
+                        "mock_used": external_mocks["requests"].get.called,
+                        "note": "Tests price extraction only, not the full "
+                                "update_product_price HTTP route (that route "
+                                "reads session/request/json_response, which "
+                                "this harness does not yet inject - see "
+                                "authentication_test/api_test)."
                     }
                 else:
                     results["smoke_test"] = "FAIL"
-                    results["errors"] = ["Price extraction test failed: Mock was not called by plugin"]
+                    results["errors"].append("Price extraction test failed: Mock was not called by plugin")
             else:
                 results["smoke_test"] = "FAIL"
-                results["errors"] = [f"Price extraction failed: expected 19.99, got {extracted_price}"]
+                results["errors"].append(f"Price extraction failed: expected 19.99, got {extracted_price}")
         else:
             results["smoke_test"] = "SKIP"
             results["skip_reasons"]["smoke_test"] = "_extract_price_from_url function not found"
         
         if hasattr(module, 'plugin_blueprint'):
-            results["api_test"] = "PASS"
-            results["details"]["api_test"] = {
-                "tested": "Blueprint registration",
-                "note": "Full API test requires auth context"
-            }
+            results["api_test"] = "SKIP"
+            results["skip_reasons"]["api_test"] = (
+                "Only blueprint registration was checked (see 'registration'). "
+                "No real HTTP request was made: the routes read session/request/"
+                "json_response, which this harness doesn't inject yet."
+            )
         
         results["external_services"] = "PASS"
         results["details"]["external_services"] = {
@@ -676,18 +620,37 @@ def _test_price_updater(module, test_db, external_mocks):
             "note": "External HTTP requests mocked with realistic HTML response"
         }
         
-        results["error_handling"] = "PASS"
-        results["details"]["error_handling"] = {
-            "tested": "Price extraction error handling",
-            "result": "Function handles missing price gracefully"
-        }
+        if hasattr(module, '_extract_price_from_url'):
+            empty_soup = MagicMock()
+            empty_soup.select_one.return_value = None
+            empty_soup.find_all.return_value = []
+            external_mocks["bs4"].BeautifulSoup.return_value = empty_soup
+            external_mocks["requests"].get.return_value.text = '<html><body>no price here</body></html>'
+            try:
+                empty_result = module._extract_price_from_url('http://test.example/no-price')
+                if empty_result is None:
+                    results["error_handling"] = "PASS"
+                    results["details"]["error_handling"] = {
+                        "tested": "extract_price_from_url on a page with no price element",
+                        "expected": None,
+                        "actual": empty_result
+                    }
+                else:
+                    results["error_handling"] = "FAIL"
+                    results["errors"].append(
+                        f"Expected None for a page with no price, got {empty_result!r}"
+                    )
+            except Exception as e:
+                results["error_handling"] = "FAIL"
+                results["errors"].append(f"_extract_price_from_url raised on missing price instead of returning None: {e}")
+            external_mocks["bs4"].BeautifulSoup.return_value = mock_soup
         
         results["authentication_test"] = "SKIP"
         results["skip_reasons"]["authentication_test"] = "Auth testing requires real auth context"
         
     except Exception as e:
         results["smoke_test"] = "FAIL"
-        results["errors"] = [f"Price updater smoke test failed: {e}"]
+        results["errors"].append(f"Price updater smoke test failed: {e}")
     
     return results
 
@@ -699,79 +662,80 @@ def _test_ki_assistent(module, test_db, external_mocks):
         "side_effects": "SKIP",
         "error_handling": "SKIP",
         "authentication_test": "SKIP",
-        "details": {}
+        "details": {},
+        "errors": [],
+        "skip_reasons": {}
     }
     
     try:
         cursor = test_db.cursor()
         
-        # Create required tables
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS products (
-                id INTEGER PRIMARY KEY,
-                name TEXT,
-                sku TEXT
-            )
+            INSERT INTO products (id, name, short, barcode, min_stock)
+            VALUES (1, 'Test Product', 'TP', '1234567890123', 10)
         """)
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS inventory (
-                id INTEGER PRIMARY KEY,
-                product_id INTEGER,
-                quantity INTEGER,
-                location_id INTEGER
-            )
-        """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS locations (
-                id INTEGER PRIMARY KEY,
-                name TEXT
-            )
-        """)
-        
-        # Insert test data
-        cursor.execute("""
-            INSERT INTO products (id, name, sku) VALUES (1, 'Test Product', 'TEST-001')
-        """)
-        cursor.execute("""
-            INSERT INTO inventory (id, product_id, quantity, location_id) VALUES (1, 1, 10, 1)
+            INSERT INTO inventory (id, product_id, quantity, location) VALUES (1, 1, 3, 'Warehouse A')
         """)
         cursor.execute("""
             INSERT INTO locations (id, name) VALUES (1, 'Warehouse A')
         """)
         test_db.commit()
         
-        # Test _tool_search_products with actual call
+        tool_results = {}
+        
         if hasattr(module, '_tool_search_products'):
             search_result = module._tool_search_products("Test")
+            tool_results["tool_search_products"] = search_result
             
-            if search_result and isinstance(search_result, list):
-                results["smoke_test"] = "PASS"
-                results["details"]["smoke_test"] = {
-                    "operation": "tool_search_products",
+            found_names = [p.get("name") for p in search_result.get("products", [])] \
+                if isinstance(search_result, dict) else []
+            
+            if isinstance(search_result, dict) and search_result.get("found") == 1 \
+                    and found_names == ["Test Product"]:
+                results["details"].setdefault("smoke_test", {})["tool_search_products"] = {
                     "search_term": "Test",
-                    "found_products": len(search_result),
-                    "result_type": type(search_result).__name__
+                    "expected_found": 1,
+                    "expected_name": "Test Product",
+                    "actual": search_result
                 }
             else:
-                results["smoke_test"] = "SKIP"
-                results["skip_reasons"]["smoke_test"] = "Search returned no results or unexpected type"
-        elif hasattr(module, '_tool_get_low_stock'):
-            # Test _tool_get_low_stock with actual call
+                results["errors"].append(
+                    f"_tool_search_products('Test') expected {{'found': 1, 'products': [name='Test Product']}}, "
+                    f"got {search_result!r}"
+                )
+        else:
+            results["skip_reasons"]["tool_search_products"] = "_tool_search_products function not found"
+        
+        if hasattr(module, '_tool_get_low_stock'):
             low_stock_result = module._tool_get_low_stock()
+            tool_results["tool_get_low_stock"] = low_stock_result
             
-            if low_stock_result and isinstance(low_stock_result, list):
-                results["smoke_test"] = "PASS"
-                results["details"]["smoke_test"] = {
-                    "operation": "tool_get_low_stock",
-                    "found_items": len(low_stock_result),
-                    "result_type": type(low_stock_result).__name__
+            low_stock_names = [p.get("name") for p in low_stock_result.get("products", [])] \
+                if isinstance(low_stock_result, dict) else []
+            
+            if isinstance(low_stock_result, dict) and low_stock_result.get("count") == 1 \
+                    and low_stock_names == ["Test Product"]:
+                results["details"].setdefault("smoke_test", {})["tool_get_low_stock"] = {
+                    "expected_count": 1,
+                    "expected_name": "Test Product",
+                    "actual": low_stock_result
                 }
             else:
-                results["smoke_test"] = "SKIP"
-                results["skip_reasons"]["smoke_test"] = "Low stock query returned no results or unexpected type"
+                results["errors"].append(
+                    f"_tool_get_low_stock() expected {{'count': 1, 'products': [name='Test Product']}} "
+                    f"(quantity 3 < min_stock 10), got {low_stock_result!r}"
+                )
+        else:
+            results["skip_reasons"]["tool_get_low_stock"] = "_tool_get_low_stock function not found"
+        
+        if tool_results and not results["errors"]:
+            results["smoke_test"] = "PASS"
+        elif tool_results:
+            results["smoke_test"] = "FAIL"
         else:
             results["smoke_test"] = "SKIP"
-            results["skip_reasons"]["smoke_test"] = "No testable internal function found"
+            results["skip_reasons"]["smoke_test"] = "No testable tool function found (_tool_search_products / _tool_get_low_stock)"
         
         results["external_services"] = "PASS"
         results["details"]["external_services"] = {
@@ -780,24 +744,36 @@ def _test_ki_assistent(module, test_db, external_mocks):
         }
         
         if hasattr(module, 'plugin_blueprint'):
-            results["api_test"] = "PASS"
-            results["details"]["api_test"] = {
-                "tested": "Blueprint registration",
-                "note": "Chat API requires KI service context"
-            }
+            results["api_test"] = "SKIP"
+            results["skip_reasons"]["api_test"] = (
+                "Only blueprint registration was checked (see 'registration'). "
+                "No real HTTP request was made against /chat or /action."
+            )
         
-        results["error_handling"] = "PASS"
-        results["details"]["error_handling"] = {
-            "tested": "Tool function error handling",
-            "result": "Functions handle missing data gracefully"
-        }
+        if hasattr(module, '_tool_search_products'):
+            try:
+                empty_result = module._tool_search_products("no-such-product-xyz")
+                if isinstance(empty_result, dict) and empty_result.get("found") == 0:
+                    results["error_handling"] = "PASS"
+                    results["details"]["error_handling"] = {
+                        "tested": "_tool_search_products with a query matching nothing",
+                        "actual": empty_result
+                    }
+                else:
+                    results["error_handling"] = "FAIL"
+                    results["errors"].append(
+                        f"_tool_search_products('no-such-product-xyz') expected found=0, got {empty_result!r}"
+                    )
+            except Exception as e:
+                results["error_handling"] = "FAIL"
+                results["errors"].append(f"_tool_search_products raised on a no-match query instead of returning found=0: {e}")
         
         results["authentication_test"] = "SKIP"
         results["skip_reasons"]["authentication_test"] = "Auth testing requires real auth context"
         
     except Exception as e:
         results["smoke_test"] = "FAIL"
-        results["errors"] = [f"KI assistent smoke test failed: {e}"]
+        results["errors"].append(f"KI assistent smoke test failed: {e}")
     
     return results
 
@@ -809,51 +785,55 @@ def _test_low_stock_notifications(module, test_db, external_mocks):
         "side_effects": "SKIP",
         "error_handling": "SKIP",
         "authentication_test": "SKIP",
-        "details": {}
+        "details": {},
+        "errors": [],
+        "skip_reasons": {}
     }
     
     try:
         cursor = test_db.cursor()
         
-        # Create required tables
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS products (
-                id INTEGER PRIMARY KEY,
-                name TEXT,
-                sku TEXT
-            )
+            INSERT INTO products (id, name, min_stock) VALUES
+                (1, 'Low Stock Product', 10),
+                (2, 'Well Stocked Product', 5),
+                (3, 'No Inventory Row Product', 5)
         """)
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS inventory (
-                id INTEGER PRIMARY KEY,
-                product_id INTEGER,
-                quantity INTEGER
-            )
-        """)
-        
-        # Insert test data with low stock
-        cursor.execute("""
-            INSERT INTO products (id, name, sku) VALUES (1, 'Low Stock Product', 'LOW-001')
-        """)
-        cursor.execute("""
-            INSERT INTO inventory (id, product_id, quantity) VALUES (1, 1, 3)
+            INSERT INTO inventory (id, product_id, quantity) VALUES
+                (1, 1, 3),
+                (2, 2, 50)
         """)
         test_db.commit()
         
-        # Test _get_low_stock_items with actual call
         if hasattr(module, '_get_low_stock_items'):
             low_stock_result = module._get_low_stock_items()
+            names = [row["name"] if hasattr(row, "keys") else row[1] for row in low_stock_result] \
+                if low_stock_result else []
             
-            if low_stock_result and isinstance(low_stock_result, list):
+            expected_present = {"Low Stock Product", "No Inventory Row Product"}
+            expected_absent = "Well Stocked Product"
+            
+            if expected_present.issubset(set(names)) and expected_absent not in names:
                 results["smoke_test"] = "PASS"
                 results["details"]["smoke_test"] = {
                     "operation": "get_low_stock_items",
-                    "found_items": len(low_stock_result),
-                    "result_type": type(low_stock_result).__name__
+                    "expected_reported": sorted(expected_present),
+                    "expected_not_reported": expected_absent,
+                    "actual_names": names
+                }
+                results["error_handling"] = "PASS"
+                results["details"]["error_handling"] = {
+                    "tested": "Product with no inventory row at all (COALESCE(quantity,0)=0)",
+                    "expected": "counted as low stock",
+                    "actual": "No Inventory Row Product" in names
                 }
             else:
-                results["smoke_test"] = "SKIP"
-                results["skip_reasons"]["smoke_test"] = "Low stock query returned no results or unexpected type"
+                results["smoke_test"] = "FAIL"
+                results["errors"].append(
+                    f"_get_low_stock_items() expected {sorted(expected_present)} present and "
+                    f"'{expected_absent}' absent, got {names}"
+                )
         else:
             results["smoke_test"] = "SKIP"
             results["skip_reasons"]["smoke_test"] = "_get_low_stock_items function not found"
@@ -865,22 +845,16 @@ def _test_low_stock_notifications(module, test_db, external_mocks):
         }
         
         if hasattr(module, 'plugin_blueprint'):
-            results["api_test"] = "PASS"
-            results["details"]["api_test"] = {
-                "tested": "Blueprint registration",
-                "note": "Notification endpoints require service configuration"
-            }
-        
-        results["error_handling"] = "PASS"
-        results["details"]["error_handling"] = {
-            "tested": "Notification failure handling",
-            "result": "Service failures handled gracefully"
-        }
+            results["api_test"] = "SKIP"
+            results["skip_reasons"]["api_test"] = (
+                "Only blueprint registration was checked (see 'registration'). "
+                "No real HTTP request was made against /check, /low-stock, etc."
+            )
         
         results["side_effects"] = "PASS"
         results["details"]["side_effects"] = {
             "background_threads": "Deactivated in test mode",
-            "note": "LAGERSYNC_TEST_MODE=true prevents thread startup"
+            "note": "LAGERSYNC_TEST_MODE=true prevents _background_checker/_telegram_request_poller from starting"
         }
         
         results["authentication_test"] = "SKIP"
@@ -888,7 +862,7 @@ def _test_low_stock_notifications(module, test_db, external_mocks):
         
     except Exception as e:
         results["smoke_test"] = "FAIL"
-        results["errors"] = [f"Low stock notifications smoke test failed: {e}"]
+        results["errors"].append(f"Low stock notifications smoke test failed: {e}")
     
     return results
 
@@ -900,18 +874,13 @@ def _test_sso(module, test_db, external_mocks):
         "side_effects": "SKIP",
         "error_handling": "SKIP",
         "authentication_test": "SKIP",
-        "details": {}
+        "details": {},
+        "errors": [],
+        "skip_reasons": {}
     }
     
     try:
         cursor = test_db.cursor()
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY,
-                username TEXT,
-                is_admin INTEGER
-            )
-        """)
         cursor.execute("""
             INSERT INTO users (id, username, is_admin) VALUES (1, 'admin', 1)
         """)
@@ -926,29 +895,30 @@ def _test_sso(module, test_db, external_mocks):
         
         mock_response = MagicMock()
         mock_response.status_code = 200
+        mock_response.raise_for_status.return_value = None
         mock_response.json.return_value = discovery_response
         external_mocks["requests"].get.return_value = mock_response
         
         if hasattr(module, '_discover'):
             discovery_result = module._discover("https://test-issuer.example")
             
-            # Verify that the mock was actually used
-            if external_mocks["requests"].get.called:
-                if discovery_result:
-                    results["smoke_test"] = "PASS"
-                    results["details"]["smoke_test"] = {
-                        "operation": "oidc_discovery",
-                        "issuer": "https://test-issuer.example",
-                        "discovery_successful": True,
-                        "endpoints_found": list(discovery_response.keys()),
-                        "mock_used": external_mocks["requests"].get.called
-                    }
-                else:
-                    results["smoke_test"] = "FAIL"
-                    results["errors"] = ["Discovery returned no result despite mock being called"]
+            required_endpoints = {"issuer", "authorization_endpoint", "token_endpoint", "userinfo_endpoint"}
+            if external_mocks["requests"].get.called and isinstance(discovery_result, dict) \
+                    and required_endpoints.issubset(discovery_result.keys()) \
+                    and discovery_result["issuer"] == discovery_response["issuer"]:
+                results["smoke_test"] = "PASS"
+                results["details"]["smoke_test"] = {
+                    "operation": "oidc_discovery",
+                    "issuer": "https://test-issuer.example",
+                    "endpoints_found": sorted(discovery_result.keys()),
+                    "mock_used": True
+                }
             else:
                 results["smoke_test"] = "FAIL"
-                results["errors"] = ["Discovery test failed: Mock was not called by plugin"]
+                results["errors"].append(
+                    f"_discover() expected a dict with {sorted(required_endpoints)}, got {discovery_result!r} "
+                    f"(mock called: {external_mocks['requests'].get.called})"
+                )
         else:
             results["smoke_test"] = "SKIP"
             results["skip_reasons"]["smoke_test"] = "_discover function not found"
@@ -960,24 +930,39 @@ def _test_sso(module, test_db, external_mocks):
         }
         
         if hasattr(module, 'plugin_blueprint'):
-            results["api_test"] = "PASS"
-            results["details"]["api_test"] = {
-                "tested": "Blueprint registration",
-                "note": "SSO flow requires real OIDC provider"
-            }
+            results["api_test"] = "SKIP"
+            results["skip_reasons"]["api_test"] = (
+                "Only blueprint registration was checked (see 'registration'). "
+                "No real HTTP request was made against /login, /callback, etc."
+            )
         
-        results["error_handling"] = "PASS"
-        results["details"]["error_handling"] = {
-            "tested": "Invalid discovery response handling",
-            "result": "Handles malformed discovery gracefully"
-        }
+        if hasattr(module, '_discover'):
+            failing_response = MagicMock()
+            failing_response.status_code = 500
+
+            def _raise_http_error():
+                raise Exception("500 Server Error: discovery endpoint unavailable")
+            failing_response.raise_for_status.side_effect = _raise_http_error
+            external_mocks["requests"].get.return_value = failing_response
+            
+            try:
+                module._discover("https://broken-issuer.example")
+                results["error_handling"] = "FAIL"
+                results["errors"].append("_discover() did not raise for a failing (HTTP 500) discovery endpoint")
+            except Exception as e:
+                results["error_handling"] = "PASS"
+                results["details"]["error_handling"] = {
+                    "tested": "_discover() against a discovery endpoint returning HTTP 500",
+                    "expected": "propagates an exception rather than returning a broken/partial config",
+                    "actual_exception": str(e)
+                }
         
         results["authentication_test"] = "SKIP"
         results["skip_reasons"]["authentication_test"] = "SSO flow requires real OIDC provider"
         
     except Exception as e:
         results["smoke_test"] = "FAIL"
-        results["errors"] = [f"SSO smoke test failed: {e}"]
+        results["errors"].append(f"SSO smoke test failed: {e}")
     
     return results
 
@@ -998,7 +983,7 @@ def main():
     with open(args.output, "w") as f:
         json.dump(all_results, f, indent=2)
     
-    failed = any(r["overall"] == "FAIL" for r in all_results)
+    failed = any(r["overall"] in ("FAIL", "INCOMPLETE") for r in all_results)
     sys.exit(1 if failed else 0)
 
 if __name__ == "__main__":
