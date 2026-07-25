@@ -948,7 +948,7 @@ def handle_telegram_request(chat_id):
     return json_response({"status": "error", "message": "Unbekannte Aktion"})
 
 try:
-    if not _threads_started:
+    if not _threads_started and os.environ.get("LAGERSYNC_TEST_MODE") != "true":
         _threads_started = True
         _checker_thread = threading.Thread(target=_background_checker, daemon=True)
         _checker_thread.start()
@@ -956,7 +956,7 @@ except Exception as e:
     print(f"[Notifications] Konnte Background-Thread nicht starten: {e}")
 
 try:
-    if _threads_started:
+    if _threads_started and os.environ.get("LAGERSYNC_TEST_MODE") != "true":
         _telegram_thread = threading.Thread(target=_telegram_request_poller, daemon=True)
         _telegram_thread.start()
 except Exception as e:

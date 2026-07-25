@@ -1,0 +1,230 @@
+[
+  {
+    "plugin": "price_updater",
+    "python_version": "3.11",
+    "detection": "PASS",
+    "metadata": "PASS",
+    "loading": "PASS",
+    "initialization": "SKIP",
+    "database_initialization": "PASS",
+    "registration": "PASS",
+    "route_discovery": "PASS",
+    "function_discovery": "PASS",
+    "api_test": "PASS",
+    "smoke_test": "FAIL",
+    "external_services": "PASS",
+    "side_effects": "PASS",
+    "error_handling": "PASS",
+    "overall": "FAIL",
+    "errors": [
+      "Price updater smoke test failed: 'skip_reasons'"
+    ],
+    "skip_reasons": {},
+    "details": {
+      "smoke_test": {
+        "operation": "extract_price_from_url",
+        "test_url": "http://test.example",
+        "expected_price": 19.99,
+        "actual_price": 19.99,
+        "mock_used": true
+      },
+      "api_test": {
+        "tested": "Blueprint registration",
+        "note": "Full API test requires auth context"
+      },
+      "external_services": {
+        "mocked": [
+          "requests",
+          "BeautifulSoup"
+        ],
+        "note": "External HTTP requests mocked with realistic HTML response"
+      },
+      "error_handling": {
+        "tested": "Price extraction error handling",
+        "result": "Function handles missing price gracefully"
+      },
+      "side_effects": {
+        "db_changes": [
+          {
+            "table": "products",
+            "before_rows": 0,
+            "after_rows": 1
+          }
+        ],
+        "note": "Database changes detected during smoke test"
+      }
+    },
+    "authentication_test": "SKIP"
+  },
+  {
+    "plugin": "ki-assistent",
+    "python_version": "3.11",
+    "detection": "PASS",
+    "metadata": "PASS",
+    "loading": "PASS",
+    "initialization": "SKIP",
+    "database_initialization": "NOT_APPLICABLE",
+    "registration": "PASS",
+    "route_discovery": "PASS",
+    "function_discovery": "PASS",
+    "api_test": "SKIP",
+    "smoke_test": "FAIL",
+    "external_services": "SKIP",
+    "side_effects": "PASS",
+    "error_handling": "SKIP",
+    "overall": "FAIL",
+    "errors": [
+      "KI assistent smoke test failed: no such column: p.short"
+    ],
+    "skip_reasons": {},
+    "details": {
+      "side_effects": {
+        "db_changes": [
+          {
+            "table": "locations",
+            "before_rows": 0,
+            "after_rows": 1
+          },
+          {
+            "table": "products",
+            "before_rows": 0,
+            "after_rows": 1
+          },
+          {
+            "table": "inventory",
+            "before_rows": 0,
+            "after_rows": 1
+          }
+        ],
+        "note": "Database changes detected during smoke test"
+      }
+    },
+    "authentication_test": "SKIP"
+  },
+  {
+    "plugin": "low_stock_notifications",
+    "python_version": "3.11",
+    "detection": "PASS",
+    "metadata": "PASS",
+    "loading": "PASS",
+    "initialization": "SKIP",
+    "database_initialization": "NOT_APPLICABLE",
+    "registration": "PASS",
+    "route_discovery": "PASS",
+    "function_discovery": "PASS",
+    "api_test": "PASS",
+    "smoke_test": "FAIL",
+    "external_services": "PASS",
+    "side_effects": "PASS",
+    "error_handling": "PASS",
+    "overall": "FAIL",
+    "errors": [
+      "Low stock notifications smoke test failed: 'skip_reasons'"
+    ],
+    "skip_reasons": {},
+    "details": {
+      "smoke_test": {
+        "operation": "get_low_stock_items",
+        "found_items": 1,
+        "result_type": "list"
+      },
+      "external_services": {
+        "mocked": [
+          "urllib",
+          "smtplib"
+        ],
+        "note": "Telegram, Discord, Webhook, Email mocked - no real sends"
+      },
+      "api_test": {
+        "tested": "Blueprint registration",
+        "note": "Notification endpoints require service configuration"
+      },
+      "error_handling": {
+        "tested": "Notification failure handling",
+        "result": "Service failures handled gracefully"
+      },
+      "side_effects": {
+        "db_changes": [
+          {
+            "table": "products",
+            "before_rows": 0,
+            "after_rows": 1
+          },
+          {
+            "table": "inventory",
+            "before_rows": 0,
+            "after_rows": 1
+          }
+        ],
+        "note": "Database changes detected during smoke test"
+      }
+    },
+    "authentication_test": "SKIP"
+  },
+  {
+    "plugin": "sso",
+    "python_version": "3.11",
+    "detection": "PASS",
+    "metadata": "PASS",
+    "loading": "PASS",
+    "initialization": "SKIP",
+    "database_initialization": "PASS",
+    "registration": "PASS",
+    "route_discovery": "PASS",
+    "function_discovery": "PASS",
+    "api_test": "PASS",
+    "smoke_test": "FAIL",
+    "external_services": "PASS",
+    "side_effects": "PASS",
+    "error_handling": "PASS",
+    "overall": "FAIL",
+    "errors": [
+      "SSO smoke test failed: 'skip_reasons'"
+    ],
+    "skip_reasons": {},
+    "details": {
+      "smoke_test": {
+        "operation": "oidc_discovery",
+        "issuer": "https://test-issuer.example",
+        "discovery_successful": true,
+        "endpoints_found": [
+          "issuer",
+          "authorization_endpoint",
+          "token_endpoint",
+          "userinfo_endpoint"
+        ],
+        "mock_used": true
+      },
+      "external_services": {
+        "mocked": [
+          "requests"
+        ],
+        "discovery_response": {
+          "issuer": "https://test-issuer.example",
+          "authorization_endpoint": "https://test-issuer.example/authorize",
+          "token_endpoint": "https://test-issuer.example/token",
+          "userinfo_endpoint": "https://test-issuer.example/userinfo"
+        }
+      },
+      "api_test": {
+        "tested": "Blueprint registration",
+        "note": "SSO flow requires real OIDC provider"
+      },
+      "error_handling": {
+        "tested": "Invalid discovery response handling",
+        "result": "Handles malformed discovery gracefully"
+      },
+      "side_effects": {
+        "db_changes": [
+          {
+            "table": "users",
+            "before_rows": 0,
+            "after_rows": 1
+          }
+        ],
+        "note": "Database changes detected during smoke test"
+      }
+    },
+    "authentication_test": "SKIP"
+  }
+]
