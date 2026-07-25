@@ -74,8 +74,36 @@ jobs:
         run: |
           echo '[]' > runtime-results-${{ matrix.python-version }}.json
 
-      - name: Ergebnisse sammeln
+      - name: Test-Artefakte hochladen
         if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-results-${{ matrix.python-version }}
+          path: runtime-results-${{ matrix.python-version }}.json
+          retention-days: 7
+
+  report:
+    name: Ergebnisse melden
+    needs: runtime-test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Abhängigkeiten installieren
+        run: pip install --prefer-binary -r requirements.txt
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: runtime-results-*
+          path: .
+          merge-multiple: true
+
+      - name: Ergebnisse sammeln
         run: |
           python3 .github/scripts/collect_runtime_results.py \
             --baseline runtime-results-3.11.json \
@@ -85,20 +113,12 @@ jobs:
             --output final-runtime-results.json
 
       - name: PR Kommentar posten
-        if: github.event_name == 'pull_request' && always()
+        if: github.event_name == 'pull_request'
         run: python3 .github/scripts/runtime_pr_comment.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-
-      - name: Test-Artefakte hochladen
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: runtime-results-${{ matrix.python-version }}
-          path: runtime-results-${{ matrix.python-version }}.json
-          retention-days: 7
 
       - name: Final-Artefakt hochladen
         if: always()

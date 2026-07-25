@@ -218,3 +218,9 @@ __marimo__/
 .streamlit/secrets.toml
 /Server
 /Test-App
+
+# Plugin runtime test output (generated locally / by CI, not repo content)
+runtime-results-*.json
+final-runtime-results.json
+test-results.json
+changed_plugins.txt
