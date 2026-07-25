@@ -3,7 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 import logging
 import json
-
+ 
 plugin_blueprint = Blueprint('price_updater', __name__)
 
 logger = logging.getLogger('price_updater')
