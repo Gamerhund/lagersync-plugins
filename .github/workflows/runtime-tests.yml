@@ -74,7 +74,7 @@ jobs:
 
       - name: Test-Artefakte hochladen
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: runtime-results-${{ matrix.python-version }}
           path: runtime-results-${{ matrix.python-version }}.json
@@ -124,7 +124,7 @@ jobs:
 
       - name: Final-Artefakt hochladen
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: final-runtime-results
           path: final-runtime-results.json
