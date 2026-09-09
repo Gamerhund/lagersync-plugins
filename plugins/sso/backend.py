@@ -7,7 +7,7 @@ from html import escape
 
 import requests
 from flask import Blueprint, redirect, request
-from cryptography.hazmat.primitives.asymmetric import rsa, padding, ec
+from cryptography.hazmat.primitives.asymmetric import rsa, padding, ec, utils
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.exceptions import InvalidSignature
 
@@ -170,8 +170,14 @@ def _decode_and_verify_jwt(token, jwks_uri):
         y = int.from_bytes(_b64url_decode(jwk['y']), 'big')
         curve = ec.SECP256R1()
         public_key = ec.EllipticCurvePublicNumbers(x, y, curve).public_key()
+        
         try:
-            public_key.verify(signature, signing_input, ec.ECDSA(hashes.SHA256()))
+            from cryptography.hazmat.primitives.asymmetric import utils
+            der_signature = utils.encode_dss_signature(
+                int.from_bytes(signature[:32], 'big'),
+                int.from_bytes(signature[32:], 'big')
+            )
+            public_key.verify(der_signature, signing_input, ec.ECDSA(hashes.SHA256()))
         except InvalidSignature:
             raise _IdTokenError('Signaturprüfung des ID-Tokens fehlgeschlagen')
 
