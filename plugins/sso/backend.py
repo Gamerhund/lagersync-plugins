@@ -1,10 +1,16 @@
 import time
 import secrets
+import json
+import base64
 from urllib.parse import urlencode
 from html import escape
 
 import requests
 from flask import Blueprint, redirect, request
+from cryptography.hazmat.primitives.asymmetric import rsa, padding, ec
+from cryptography.hazmat.primitives.asymmetric.utils import encode_dss_signature
+from cryptography.hazmat.primitives import hashes
+from cryptography.exceptions import InvalidSignature
 
 plugin_blueprint = Blueprint('sso', __name__)
 
@@ -12,11 +18,18 @@ CONFIG_KEYS = ['issuer', 'client_id', 'client_secret', 'button_text', 'autocreat
                'username_claim', 'scope', 'debug_mode']
 
 ADMIN_ONLY_MSG = 'Nur für Administratoren'
+GENERIC_UNAVAILABLE_MSG = 'SSO ist aktuell nicht erreichbar. Bitte später erneut versuchen oder Administrator kontaktieren.'
+GENERIC_LOGIN_FAILED_MSG = 'Anmeldung fehlgeschlagen. Bitte erneut versuchen oder Administrator kontaktieren.'
 CALLBACK_PATH = '/callback'
 LOGOUT_PATH = '/logout'
 
 _discovery_cache = {}
+_jwks_cache = {}
 _DISCOVERY_CACHE_SECONDS = 300
+
+
+class _IdTokenError(Exception):
+    pass
 
 
 def _init_table():
@@ -96,6 +109,110 @@ def _discover(issuer):
     return doc
 
 
+def _get_jwks(jwks_uri):
+    now = time.time()
+    cached = _jwks_cache.get(jwks_uri)
+    if cached and now - cached[0] < _DISCOVERY_CACHE_SECONDS:
+        return cached[1]
+
+    resp = requests.get(jwks_uri, timeout=10)
+    resp.raise_for_status()
+    doc = resp.json()
+    _jwks_cache[jwks_uri] = (now, doc)
+    return doc
+
+
+def _b64url_decode(segment):
+    return base64.urlsafe_b64decode(segment + '=' * (-len(segment) % 4))
+
+
+def _find_signing_key(jwks_uri, kid):
+    jwks = _get_jwks(jwks_uri)
+    for key in jwks.get('keys', []):
+        if key.get('kid') == kid and key.get('kty') in ('RSA', 'EC'):
+            return key
+    _jwks_cache.pop(jwks_uri, None)
+    for key in _get_jwks(jwks_uri).get('keys', []):
+        if key.get('kid') == kid and key.get('kty') in ('RSA', 'EC'):
+            return key
+    raise _IdTokenError('Kein passender Schlüssel (kid) im JWKS gefunden')
+
+
+def _decode_and_verify_jwt(token, jwks_uri):
+    try:
+        header_b64, payload_b64, sig_b64 = token.split('.')
+    except ValueError:
+        raise _IdTokenError('ID-Token ist kein gültiges JWT')
+
+    try:
+        header = json.loads(_b64url_decode(header_b64))
+        payload = json.loads(_b64url_decode(payload_b64))
+        signature = _b64url_decode(sig_b64)
+    except Exception as e:
+        raise _IdTokenError(f'ID-Token konnte nicht dekodiert werden: {e}')
+
+    alg = header.get('alg')
+    if alg not in ('RS256', 'ES256'):
+        raise _IdTokenError(f'Nicht unterstützter Signaturalgorithmus: {alg!r}')
+
+    jwk = _find_signing_key(jwks_uri, header.get('kid'))
+    signing_input = f'{header_b64}.{payload_b64}'.encode('ascii')
+
+    if alg == 'RS256':
+        n = int.from_bytes(_b64url_decode(jwk['n']), 'big')
+        e = int.from_bytes(_b64url_decode(jwk['e']), 'big')
+        public_key = rsa.RSAPublicNumbers(e, n).public_key()
+        try:
+            public_key.verify(signature, signing_input, padding.PKCS1v15(), hashes.SHA256())
+        except InvalidSignature:
+            raise _IdTokenError('Signaturprüfung des ID-Tokens fehlgeschlagen')
+    elif alg == 'ES256':
+        if jwk.get('crv') != 'P-256':
+            raise _IdTokenError(f"Unerwartete Kurve für ES256: {jwk.get('crv')!r}")
+        if len(signature) != 64:
+            raise _IdTokenError('ES256-Signatur hat nicht die erwartete Länge (64 Bytes)')
+        x = int.from_bytes(_b64url_decode(jwk['x']), 'big')
+        y = int.from_bytes(_b64url_decode(jwk['y']), 'big')
+        public_key = ec.EllipticCurvePublicNumbers(x, y, ec.SECP256R1()).public_key()
+        # JWS-ES256 ist raw R||S (RFC 7518 3.4), cryptography.verify() will DER
+        der_signature = encode_dss_signature(
+            int.from_bytes(signature[:32], 'big'),
+            int.from_bytes(signature[32:], 'big'),
+        )
+        try:
+            public_key.verify(der_signature, signing_input, ec.ECDSA(hashes.SHA256()))
+        except InvalidSignature:
+            raise _IdTokenError('Signaturprüfung des ID-Tokens fehlgeschlagen')
+
+    return payload
+
+
+def _verify_identity(cfg, discovery, id_token, userinfo, expected_nonce):
+    if not id_token:
+        raise _IdTokenError('Anbieter hat kein id_token zurückgegeben (enthält der Scope "openid"?)')
+    if 'jwks_uri' not in discovery:
+        raise _IdTokenError('Discovery-Dokument enthält kein jwks_uri')
+
+    claims = _decode_and_verify_jwt(id_token, discovery['jwks_uri'])
+
+    if time.time() - 60 > claims.get('exp', 0):
+        raise _IdTokenError('ID-Token ist abgelaufen')
+
+    issuer = (discovery.get('issuer') or cfg['issuer']).rstrip('/')
+    if str(claims.get('iss', '')).rstrip('/') != issuer:
+        raise _IdTokenError('iss im ID-Token stimmt nicht mit dem Issuer überein')
+
+    aud = claims.get('aud')
+    if not (aud == cfg['client_id'] or (isinstance(aud, list) and cfg['client_id'] in aud)):
+        raise _IdTokenError('aud im ID-Token stimmt nicht mit client_id überein')
+
+    if not expected_nonce or claims.get('nonce') != expected_nonce:
+        raise _IdTokenError('nonce im ID-Token stimmt nicht mit der Login-Session überein')
+
+    if claims.get('sub') and userinfo.get('sub') and claims['sub'] != userinfo['sub']:
+        raise _IdTokenError('sub aus ID-Token und Userinfo-Antwort stimmen nicht überein')
+
+
 @plugin_blueprint.route('/config', methods=['GET'])
 @require_auth()
 def get_config():
@@ -152,7 +269,8 @@ def sso_login():
         discovery = _discover(cfg['issuer'])
         authorize_endpoint = discovery['authorization_endpoint']
     except Exception as e:
-        return f'Discovery fehlgeschlagen: {e}', 502
+        print(f'[sso] Discovery fehlgeschlagen für {cfg["issuer"]}: {e}')
+        return GENERIC_UNAVAILABLE_MSG, 502
 
     state = secrets.token_urlsafe(24)
     nonce = secrets.token_urlsafe(24)
@@ -178,19 +296,21 @@ def sso_login():
 
 
 def _validate_callback_params():
+    expected_state = session.pop('sso_state', None)
+    expected_nonce = session.pop('sso_nonce', None)
+    ts = session.pop('sso_state_ts', 0)
+
     if request.args.get('error'):
         error = request.args.get('error')
-        return None, f'Anmeldung abgebrochen: {escape(error)}', 400
+        return None, None, f'Anmeldung abgebrochen: {escape(error)}', 400
 
     code = request.args.get('code')
     state = request.args.get('state')
-    expected_state = session.pop('sso_state', None)
-    ts = session.pop('sso_state_ts', 0)
 
     if not code or not state or state != expected_state or time.time() - ts > 600:
-        return None, 'Ungültige oder abgelaufene Anfrage.', 400
+        return None, None, 'Ungültige oder abgelaufene Anfrage.', 400
 
-    return code, None, None
+    return code, expected_nonce, None, None
 
 
 def _exchange_token(cfg, code):
@@ -199,7 +319,8 @@ def _exchange_token(cfg, code):
         token_endpoint = discovery['token_endpoint']
         userinfo_endpoint = discovery['userinfo_endpoint']
     except Exception as e:
-        return None, f'Discovery fehlgeschlagen: {e}', 502
+        print(f'[sso] Discovery fehlgeschlagen für {cfg["issuer"]}: {e}')
+        return None, GENERIC_UNAVAILABLE_MSG, 502
 
     prefix = request.path.rsplit(CALLBACK_PATH, 1)[0]
     redirect_uri = request.host_url.rstrip('/') + prefix + CALLBACK_PATH
@@ -217,30 +338,43 @@ def _exchange_token(cfg, code):
             timeout=10
         )
         token_resp.raise_for_status()
-        access_token = token_resp.json().get('access_token')
+        token_data = token_resp.json()
 
         userinfo_resp = requests.get(
             userinfo_endpoint,
-            headers={'Authorization': f'Bearer {access_token}'},
+            headers={'Authorization': f'Bearer {token_data.get("access_token")}'},
             timeout=10
         )
         userinfo_resp.raise_for_status()
-        return userinfo_resp.json(), None, None
+        result = {
+            'userinfo': userinfo_resp.json(),
+            'id_token': token_data.get('id_token'),
+            'discovery': discovery,
+        }
+        return result, None, None
     except Exception as e:
-        return None, f'Token-Austausch fehlgeschlagen: {e}', 502
+        print(f'[sso] Token-Austausch fehlgeschlagen: {e}')
+        return None, GENERIC_LOGIN_FAILED_MSG, 502
 
 
 @plugin_blueprint.route(CALLBACK_PATH, methods=['GET'])
 def sso_callback():
     cfg = _get_config()
-    code, _, error_msg = _validate_callback_params()
-    if error_msg:
-        return error_msg, 400
-
-    userinfo, error_msg, status = _exchange_token(cfg, code)
+    code, expected_nonce, error_msg, status = _validate_callback_params()
     if error_msg:
         return error_msg, status
 
+    result, error_msg, status = _exchange_token(cfg, code)
+    if error_msg:
+        return error_msg, status
+
+    try:
+        _verify_identity(cfg, result['discovery'], result['id_token'], result['userinfo'], expected_nonce)
+    except Exception as e:
+        print(f'[sso] ID-Token-Prüfung fehlgeschlagen: {e}')
+        return GENERIC_LOGIN_FAILED_MSG, 400
+
+    userinfo = result['userinfo']
     claim = cfg['username_claim']
     username = userinfo.get(claim) or userinfo.get('preferred_username') or userinfo.get('email') or userinfo.get('sub')
     if not username:
