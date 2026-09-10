@@ -1,8 +1,8 @@
 {
   "name": "SSO",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "author": "Jonas (Gamerhund)",
-  "description": "Single Sign-On per OpenID Connect mit konfigurierbarem Username-Claim, Nonce, Logout, Scope und verbesserter Sicherheit. Funktioniert mit jedem OIDC-Provider.",
+  "description": "Single Sign-On per OpenID Connect mit RS256 und ES256 Unterstützung, konfigurierbarem Username-Claim, Nonce-Prüfung, Logout und umfassender Sicherheit. Kompatibel mit Keycloak, Auth0, Azure AD, Okta, Google und anderen OIDC-Providern.",
   "verified": true,
   "enabled": false,
   "permissions": [
