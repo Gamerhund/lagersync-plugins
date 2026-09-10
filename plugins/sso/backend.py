@@ -7,8 +7,9 @@ from html import escape
 
 import requests
 from flask import Blueprint, redirect, request
-from cryptography.hazmat.primitives.asymmetric import rsa, padding, ec, utils
-from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import rsa, padding, ec
+from cryptography.hazmat.primitives.asymmetric.utils import encode_dss_signature
+from cryptography.hazmat.primitives import hashes
 from cryptography.exceptions import InvalidSignature
 
 plugin_blueprint = Blueprint('sso', __name__)
@@ -166,17 +167,19 @@ def _decode_and_verify_jwt(token, jwks_uri):
         except InvalidSignature:
             raise _IdTokenError('Signaturprüfung des ID-Tokens fehlgeschlagen')
     elif alg == 'ES256':
+        if jwk.get('crv') != 'P-256':
+            raise _IdTokenError(f"Unerwartete Kurve für ES256: {jwk.get('crv')!r}")
+        if len(signature) != 64:
+            raise _IdTokenError('ES256-Signatur hat nicht die erwartete Länge (64 Bytes)')
         x = int.from_bytes(_b64url_decode(jwk['x']), 'big')
         y = int.from_bytes(_b64url_decode(jwk['y']), 'big')
-        curve = ec.SECP256R1()
-        public_key = ec.EllipticCurvePublicNumbers(x, y, curve).public_key()
-        
+        public_key = ec.EllipticCurvePublicNumbers(x, y, ec.SECP256R1()).public_key()
+        # JWS-ES256 ist raw R||S (RFC 7518 3.4), cryptography.verify() will DER
+        der_signature = encode_dss_signature(
+            int.from_bytes(signature[:32], 'big'),
+            int.from_bytes(signature[32:], 'big'),
+        )
         try:
-            from cryptography.hazmat.primitives.asymmetric import utils
-            der_signature = utils.encode_dss_signature(
-                int.from_bytes(signature[:32], 'big'),
-                int.from_bytes(signature[32:], 'big')
-            )
             public_key.verify(der_signature, signing_input, ec.ECDSA(hashes.SHA256()))
         except InvalidSignature:
             raise _IdTokenError('Signaturprüfung des ID-Tokens fehlgeschlagen')
