@@ -1,6 +1,6 @@
 {
   "name": "Preis-Aktualisierer",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "author": "Jonas (Gamerhund)",
   "description": "Aktualisiert EK-Preise automatisch basierend auf konfigurierten URLs. Unterstützt Web Scraping für verschiedene Händler.",
   "description_en": "Automatically updates EK prices based on configured URLs. Supports web scraping for various retailers.",
@@ -14,7 +14,7 @@
     "system.network"
   ],
   "files": {
-    "backend.py": "e41dad2b36a3195680c2d8664e6fdced5f441d42669d5257a6ab388c81bb8cfc",
-    "frontend.js": "8b4f0852d1ff1574e77ab28bed3eba2c5760789af41a59d04768b7aef1894dd5"
+    "backend.py": "e0d87b6630c09dde92a2187868bad2a6e93ac3be192cd984dd9c65b7301c1ad5",
+    "frontend.js": "ea922f1afc740c052858ccdb082c2f14eb9216c3003c90b09cd3db85cf8ec70b"
   }
 }
