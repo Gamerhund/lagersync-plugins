@@ -1,6 +1,6 @@
 {
   "name": "KI Lagerassistent",
-  "version": "2.2.3",
+  "version": "2.2.4",
   "author": "Jonas (Gamerhund)",
   "description": "KI-Chat mit Ollama/OpenAI. Tool Calling: KI fragt Lagerdaten aktiv ab (search, low stock, locations, stats, change_stock). Skaliert auf beliebig viele Artikel.",
   "verified": true,
@@ -16,7 +16,7 @@
     "api.admin"
   ],
   "files": {
-    "backend.py": "3b7a26963bdf115fd5b3214da65845f9e623ba7ae04d31ca5064aed67a61c146",
-    "frontend.js": "e7501fb0d0e297a8ffde8b39d31d64add1541f1d6f87aea4c3263ac01feeb830"
+    "backend.py": "55d3a65cf310015b3676eca0f4877b9fd3abed6763009a17630fec3ce429e495",
+    "frontend.js": "be798d2e50c8ddd42e85769a9ef858d5c5158d71507a2431cd49861b3d1a6007"
   }
 }

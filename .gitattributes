@@ -1,0 +1,6 @@
+# 26.09.2026: Textdateien im Repo immer mit LF (sonst passen signierte Datei-Hashes nicht)
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
+*.sig -text
