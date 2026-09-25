@@ -5,5 +5,8 @@
   "description": "Professionelle Design-Optionen und Themes für deine Lagerverwaltung.",
   "verified": true,
   "enabled": false,
-  "permissions": []
+  "permissions": [],
+  "files": {
+    "frontend.js": "532cec0fae8997fdfeedcdb522dd325845235d52ce31e20e25ac9ab9466f326c"
+  }
 }
