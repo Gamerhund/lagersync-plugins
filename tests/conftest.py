@@ -47,5 +47,8 @@ def valid_permissions():
 
 @pytest.fixture
 def plugin_public_key():
-    """Public Key für Plugin-Signatur-Verifikation"""
-    return "lLEUuDnXSAZGt2P5CHYEg86PHgx6DGl2rGaVsznIU+c="
+    """Public Key für Plugin-Signatur-Verifikation.
+
+    Muss IMMER gleich sein wie VERIFIED_DEVELOPERS["gamerhund"] in plugin_security.py des
+    LagerSync-Servers. Schlüsselwechsel 25.09.2026 (alter Schlüssel war veröffentlicht)."""
+    return "ODePVck8Vr4FJjknU2yTPF8OAcz0pE4f3nPXsKf1EBY="
