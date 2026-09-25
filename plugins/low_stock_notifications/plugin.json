@@ -1,6 +1,6 @@
 {
   "name": "Lager-Benachrichtigungen",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "author": "Jonas (Gamerhund)",
   "description": "Benachrichtigungen per Telegram, Discord, Webhook oder E-Mail.",
   "verified": true,
@@ -14,5 +14,9 @@
     "notifications.send",
     "api.public",
     "api.admin"
-  ]
+  ],
+  "files": {
+    "backend.py": "7a791d6c8dc31f3d2d9d40480358b5192212f97aa50deb623414c18741b02f3d",
+    "frontend.js": "69a4b5b817a5d48c67e0b555ec387f05b1f369aa1907cf160cca01c39a07f7ad"
+  }
 }
