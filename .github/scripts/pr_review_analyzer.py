@@ -111,7 +111,6 @@ def format_comment(report, categories):
     """Formatiert den PR-Kommentar."""
     summary = report.get("summary", {})
     total   = summary.get("total", 0)
-    passed  = summary.get("passed", 0)
     failed  = summary.get("failed", 0)
     errors  = summary.get("error", 0)
 
@@ -225,7 +224,7 @@ def classify_type(files):
         and f.get("status") == "added"
     ]
     only_docs   = all(p.endswith(".md") or p.startswith("docs/") for p in paths) if paths else False
-    only_chore  = all(p.startswith(".github/") or p.startswith("tests/") for p in paths) if paths else False
+    only_chore  = all(p.startswith((".github/", "tests/")) for p in paths) if paths else False
 
     if new_plugin_jsons:
         return "type: feature"
@@ -303,7 +302,7 @@ def apply_labels(repo, pr_number, headers, risk_label, type_label):
     except Exception:
         current = []
 
-    stale = [l for l in current if l.startswith("risk: ") or l.startswith("type: ")]
+    stale = [l for l in current if l.startswith(("risk: ", "type: "))]
     for label in stale:
         if label in (risk_label, type_label):
             continue
