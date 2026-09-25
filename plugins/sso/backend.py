@@ -102,7 +102,7 @@ def _discover(issuer):
     if cached and now - cached[0] < _DISCOVERY_CACHE_SECONDS:
         return cached[1]
 
-    resp = requests.get(f"{issuer}/.well-known/openid-configuration", timeout=10)
+    resp = safe_request('GET', f"{issuer}/.well-known/openid-configuration", timeout=10)
     resp.raise_for_status()
     doc = resp.json()
     _discovery_cache[issuer] = (now, doc)
@@ -115,7 +115,7 @@ def _get_jwks(jwks_uri):
     if cached and now - cached[0] < _DISCOVERY_CACHE_SECONDS:
         return cached[1]
 
-    resp = requests.get(jwks_uri, timeout=10)
+    resp = safe_request('GET', jwks_uri, timeout=10)
     resp.raise_for_status()
     doc = resp.json()
     _jwks_cache[jwks_uri] = (now, doc)
@@ -326,7 +326,7 @@ def _exchange_token(cfg, code):
     redirect_uri = request.host_url.rstrip('/') + prefix + CALLBACK_PATH
 
     try:
-        token_resp = requests.post(
+        token_resp = safe_request('POST', 
             token_endpoint,
             data={
                 'grant_type': 'authorization_code',
@@ -340,7 +340,7 @@ def _exchange_token(cfg, code):
         token_resp.raise_for_status()
         token_data = token_resp.json()
 
-        userinfo_resp = requests.get(
+        userinfo_resp = safe_request('GET', 
             userinfo_endpoint,
             headers={'Authorization': f'Bearer {token_data.get("access_token")}'},
             timeout=10
