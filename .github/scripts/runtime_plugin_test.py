@@ -102,6 +102,48 @@ def setup_external_mocks(module):
         "smtplib": mock_smtplib
     }
 
+
+def inject_net_helpers(module, external_mocks):
+    """Netz-Helfer wie im LagerSync-Server (plugin_net.py, seit 25.09.2026).
+
+    Der Server legt safe_request, safe_urlopen, check_url, check_host_port und UnsafeURLError
+    in den Plugin-Kontext. Plugins dürfen damit nur ins öffentliche Internet. Hier im Test
+    zeigen dieselben Namen auf die gemockten Bibliotheken, es gibt also kein echtes Netz."""
+    mock_requests = external_mocks["requests"]
+
+    class UnsafeURLError(Exception):
+        pass
+
+    def safe_request(method, url, **kwargs):
+        fn = getattr(mock_requests, str(method).lower(), None)
+        if callable(fn):
+            return fn(url, **kwargs)
+        return mock_requests.request(method, url, **kwargs)
+
+    def safe_urlopen(req, timeout=10, **kwargs):
+        import urllib.request as _ur   # zur Laufzeit nachschlagen, damit Tests urlopen patchen können
+        return _ur.urlopen(req, timeout=timeout, **kwargs)
+
+    def check_url(url, allowed_ports=None, require_https=False, resolve=None):
+        from urllib.parse import urlparse
+        p = urlparse(str(url or ""))
+        ok = p.scheme in ("http", "https") and bool(p.hostname)
+        if ok and require_https and p.scheme != "https":
+            ok = False
+        return ok, "" if ok else "Adresse nicht erlaubt"
+
+    def check_host_port(host, port, allowed_ports=None, resolve=None):
+        try:
+            ok = bool(host) and (not allowed_ports or int(port) in set(allowed_ports))
+        except (TypeError, ValueError):
+            ok = False
+        return ok, "" if ok else "Ziel nicht erlaubt"
+
+    for name, value in (("safe_request", safe_request), ("safe_urlopen", safe_urlopen),
+                        ("check_url", check_url), ("check_host_port", check_host_port),
+                        ("UnsafeURLError", UnsafeURLError)):
+        setattr(module, name, value)
+
 def test_plugin_runtime(plugin_name, python_version):
     plugin_dir = PLUGINS_DIR / plugin_name
     plugin_json = plugin_dir / "plugin.json"
@@ -287,6 +329,7 @@ def test_plugin_runtime(plugin_name, python_version):
             setattr(module, key, value)
         
         external_mocks = setup_external_mocks(module)
+        inject_net_helpers(module, external_mocks)
         
         import sys
         original_modules = {}

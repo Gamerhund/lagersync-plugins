@@ -25,18 +25,15 @@ _threads_started = False
 plugin_blueprint = Blueprint("low_stock_notifications", __name__)
 
 def _is_safe_url(url: str, allow_localhost: bool = True) -> bool:
-    """Validate URL scheme to prevent SSRF attacks."""
+    """25.09.2026: zentrale Prüfung des LagerSync-Servers (plugin_net.check_url): nur öffentliches
+    Internet, kein localhost/Heimnetz/Tailnet. Ein lokaler Dienst (z. B. Ollama) nur über die
+    Betreiber-Freigabe PLUGIN_NET_ALLOW. Ohne Prüf-Helfer: alles gesperrt (fail-closed)."""
     try:
-        parsed = urllib.parse.urlparse(url)
-        scheme = (parsed.scheme or '').lower()
-        hostname = (parsed.hostname or '').lower()
-        if scheme not in ('http', 'https'):
-            return False
-        if allow_localhost and hostname in ('localhost', '127.0.0.1', '::1'):
-            return True
-        return scheme == 'https'
-    except Exception:
+        ok, _grund = check_url(url)  # noqa: F821 – vom Server in den Plugin-Kontext gelegt
+        return bool(ok)
+    except NameError:
         return False
+
 
 def _default_notify_settings():
     return {
@@ -271,7 +268,7 @@ def _send_telegram(settings, message):
             data=json_module.dumps(payload).encode(_ENC_UTF8),
             headers={"Content-Type": _CONTENT_TYPE_JSON}
         )
-        with urllib.request.urlopen(req, timeout=15) as _:  # nosec B310 # NOSONAR
+        with safe_urlopen(req, timeout=15) as _:  # nosec B310 # NOSONAR
             data = json_module.loads(_.read().decode(_ENC_UTF8))
             if data.get("ok"):
                 return True, None
@@ -306,7 +303,7 @@ def _send_discord(settings, message):
             data=json_module.dumps(payload).encode(_ENC_UTF8),
             headers={"Content-Type": _CONTENT_TYPE_JSON}
         )
-        with urllib.request.urlopen(req, timeout=15) as _:  # nosec B310 # NOSONAR
+        with safe_urlopen(req, timeout=15) as _:  # nosec B310 # NOSONAR
             return True, None
     except urllib.error.HTTPError as e:
         err_body = e.read().decode(_ENC_UTF8) if e.fp else ""
@@ -331,7 +328,7 @@ def _send_webhook(settings, data):
             data=json_module.dumps(data).encode(_ENC_UTF8),
             headers={"Content-Type": _CONTENT_TYPE_JSON}
         )
-        with urllib.request.urlopen(req, timeout=15) as resp:  # nosec B310 # NOSONAR
+        with safe_urlopen(req, timeout=15) as resp:  # nosec B310 # NOSONAR
             return True, None
     except urllib.error.HTTPError as e:
         err_body = e.read().decode(_ENC_UTF8) if e.fp else ""
@@ -360,6 +357,14 @@ def _send_email(settings, subject, body):
         msg['Subject'] = subject
         msg.attach(MIMEText(body, 'plain', _ENC_UTF8))
 
+        # 25.09.2026: Mailserver nur im öffentlichen Internet und nur auf SMTP-Ports
+        _smtp_port = int(port) if use_tls else 465
+        try:
+            _ok, _grund = check_host_port(smtp, _smtp_port, {25, 465, 587})  # noqa: F821
+        except NameError:
+            _ok, _grund = False, 'Netzprüfung nicht verfügbar'
+        if not _ok:
+            return False, f"Mailserver nicht erlaubt: {_grund}"
         if use_tls:
             with smtplib.SMTP(smtp, port, timeout=30) as server:
                 server.starttls()
@@ -830,7 +835,7 @@ def _get_telegram_updates(settings):
     try:
         req_url = url + "?" + "&".join(f"{k}={v}" for k, v in params.items())
         req = urllib.request.Request(req_url)
-        with urllib.request.urlopen(req, timeout=10) as resp:  # nosec B310 # validated by _is_safe_url
+        with safe_urlopen(req, timeout=10) as resp:  # nosec B310 # validated by _is_safe_url
             data = json_module.loads(resp.read().decode(_ENC_UTF8))
             if data.get("ok"):
                 return data.get("result", [])
