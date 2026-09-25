@@ -112,7 +112,7 @@ def _extract_price_from_url(url, selector=None):
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
-        response = requests.get(url, headers=headers, timeout=10)
+        response = safe_request('GET', url, headers=headers, timeout=10)  # noqa: F821 – nur öffentliches Internet (25.09.2026)
         response.raise_for_status()
         
         soup = BeautifulSoup(response.text, 'html.parser')

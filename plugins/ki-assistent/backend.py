@@ -134,16 +134,13 @@ TOOLS = [
 
 
 def _is_safe_url(url: str, allow_localhost: bool = True) -> bool:
+    """25.09.2026: zentrale Prüfung des LagerSync-Servers (plugin_net.check_url): nur öffentliches
+    Internet, kein localhost/Heimnetz/Tailnet. Ein lokaler Dienst (z. B. Ollama) nur über die
+    Betreiber-Freigabe PLUGIN_NET_ALLOW. Ohne Prüf-Helfer: alles gesperrt (fail-closed)."""
     try:
-        parsed = urllib.parse.urlparse(url)
-        scheme = (parsed.scheme or '').lower()
-        hostname = (parsed.hostname or '').lower()
-        if scheme not in ('http', 'https'):
-            return False
-        if allow_localhost and hostname in ('localhost', '127.0.0.1', '::1'):
-            return True
-        return scheme == 'https'
-    except Exception:
+        ok, _grund = check_url(url)  # noqa: F821 – vom Server in den Plugin-Kontext gelegt
+        return bool(ok)
+    except NameError:
         return False
 
 
@@ -360,7 +357,7 @@ def _call_ollama(settings, messages):
 
     timeout = settings.get("timeout", 120)
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with safe_urlopen(req, timeout=timeout) as resp:
             data = json_module.loads(resp.read().decode('utf-8'))
             message = data.get("message", {})
             tool_calls_raw = message.get("tool_calls") or []
@@ -434,7 +431,7 @@ def _call_openai(settings, messages):
 
     timeout = settings.get("timeout", 120)
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with safe_urlopen(req, timeout=timeout) as resp:
             data = json_module.loads(resp.read().decode('utf-8'))
             choice = data.get("choices", [{}])[0]
             message = choice.get("message", {})
@@ -641,7 +638,7 @@ def _test_ollama(stored, model):
         headers={"Content-Type": CONTENT_TYPE_JSON}
     )
     try:
-        with urllib.request.urlopen(req, timeout=15) as resp:  # nosec B310
+        with safe_urlopen(req, timeout=15) as resp:  # nosec B310
             data = json_module.loads(resp.read().decode('utf-8'))
             content = data.get("message", {}).get("content", "OK")
             return json_response({"status": "ok", "response": content[:100]})
@@ -666,7 +663,7 @@ def _test_openai(stored, model):
         headers={"Content-Type": CONTENT_TYPE_JSON, "Authorization": f"Bearer {api_key}"}
     )
     try:
-        with urllib.request.urlopen(req, timeout=15) as resp:  # nosec B310
+        with safe_urlopen(req, timeout=15) as resp:  # nosec B310
             data = json_module.loads(resp.read().decode('utf-8'))
             content = data.get("choices", [{}])[0].get("message", {}).get("content", "OK")
             return json_response({"status": "ok", "response": content[:100]})
@@ -697,7 +694,7 @@ def list_models():
     url = settings.get("ollama_url", OLLAMA_DEFAULT_URL) + "/api/tags"
     try:
         req = urllib.request.Request(url)
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with safe_urlopen(req, timeout=10) as resp:
             data = json_module.loads(resp.read().decode('utf-8'))
             models = [m.get("name", "") for m in data.get("models", [])]
             return json_response({"status": "ok", "models": models})
