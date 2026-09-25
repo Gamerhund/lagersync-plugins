@@ -77,7 +77,6 @@ def generate_plugin_table(plugins: Dict[str, dict], lang: str = "de") -> str:
     rows = []
     for plugin_name in sorted(plugins.keys()):
         metadata = plugins[plugin_name]
-        name = metadata.get("name", plugin_name)
 
         if lang == "en":
             # Priority: explicit description_en in plugin.json (safe for new,
@@ -145,7 +144,6 @@ def update_readme(readme_path: Path, plugins: Dict[str, dict], lang: str = "de")
     
     new_lines = []
     in_table_section = False
-    table_section_added = False
     
     for line in lines:
         if table_start_marker in line:
@@ -154,7 +152,6 @@ def update_readme(readme_path: Path, plugins: Dict[str, dict], lang: str = "de")
             new_lines.append(new_table)
             new_lines.append("")
             in_table_section = True
-            table_section_added = True
         elif in_table_section and line.strip() == "---":
             new_lines.append(line)
             in_table_section = False
