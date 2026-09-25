@@ -1,12 +1,12 @@
 {
   "name": "Profi Design",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Jonas (Gamerhund)",
   "description": "Professionelle Design-Optionen und Themes für deine Lagerverwaltung.",
   "verified": true,
   "enabled": false,
   "permissions": [],
   "files": {
-    "frontend.js": "532cec0fae8997fdfeedcdb522dd325845235d52ce31e20e25ac9ab9466f326c"
+    "frontend.js": "e9a68135c756e3c3a211ea276b8b326caff7f48a87fbd0dfc72038306178591b"
   }
 }

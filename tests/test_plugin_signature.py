@@ -9,6 +9,7 @@ Prüft ob die plugin.sig Dateien vorhanden sind und gültig sind
 import pytest
 import json
 import base64
+import hashlib
 from pathlib import Path
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
@@ -69,3 +70,42 @@ def test_signature_format(plugin_dir):
                 
                 # Prüfen ob es gültiges base64 ist
                 base64.b64decode(signature_b64)
+
+
+# 26.09.2026: Die Datei-Hashes in plugin.json ("files") müssen zu den Dateien passen – genau so, wie der
+# LagerSync-Server prüft (plugin_security.file_digest). Vorher prüfte die CI nur die Signatur von
+# plugin.json; unter Windows mit CRLF signierte Plugins waren auf dem Server deshalb „nicht gültig signiert“.
+TEXT_HASH_EXTENSIONS = {'.py', '.js', '.mjs', '.cjs', '.css', '.html', '.htm', '.json', '.txt',
+                        '.svg', '.yml', '.yaml', '.xml', '.csv'}
+HASH_EXCLUDE = {'plugin.json', 'plugin.sig'}
+
+
+def _file_digest(path):
+    data = Path(path).read_bytes()
+    if Path(path).suffix.lower() in TEXT_HASH_EXTENSIONS:
+        data = data.replace(b'\r\n', b'\n')
+    return hashlib.sha256(data).hexdigest()
+
+
+def test_signed_file_hashes_match(plugin_dir):
+    """Jede Code-Datei muss in plugin.json["files"] stehen und der Hash muss stimmen."""
+    for plugin_path in plugin_dir.iterdir():
+        if not plugin_path.is_dir() or plugin_path.name.startswith("__"):
+            continue
+        data = json.loads((plugin_path / "plugin.json").read_text(encoding='utf-8'))
+        if not data.get("verified"):
+            continue
+        files = data.get("files") or {}
+        assert files, f"{plugin_path.name}: plugin.json hat keine Datei-Hashes – neu signieren"
+        present = sorted(
+            p.relative_to(plugin_path).as_posix() for p in plugin_path.rglob('*')
+            if p.is_file() and p.name not in HASH_EXCLUDE and not p.name.startswith('.')
+            and not p.name.lower().endswith('.md') and '__pycache__' not in p.parts
+            and not any(part.startswith('.') for part in p.relative_to(plugin_path).parts[:-1]))
+        missing = [f for f in present if f not in files]
+        assert not missing, f"{plugin_path.name}: nicht signierte Dateien {missing}"
+        for rel, expected in files.items():
+            assert '..' not in rel.split('/'), f"{plugin_path.name}: ungültiger Pfad {rel}"
+            actual = _file_digest(plugin_path / rel)
+            assert actual == expected, (f"{plugin_path.name}/{rel}: Hash stimmt nicht "
+                                        f"(neu signieren mit aktuellem sign_plugin.py)")
