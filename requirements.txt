@@ -1,5 +1,5 @@
 # Test-Abhängigkeiten für Plugin-Tests
-pytest==9.1.1
+pytest==9.2.0
 cryptography==50.0.2
 pytest-json-report==1.5.0
 requests>=2.34.2
